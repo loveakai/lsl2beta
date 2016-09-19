@@ -24,13 +24,12 @@ Phi       <- matrix(diag(0.1,M,M), ncol = M, nrow = M)
 ide       <- diag(1, ncol = M, nrow = M)
 
 
-mu_v      <- mu_eta[1:n_obs]
+#mu_v      <- mu_eta[1:n_obs]
 
 
 G_obs     <- c(rep(T,n_obs),rep(F,n_lat))
 v         <- subset(eta,G_obs)
-e_eta     <- sapply(dta,mean)
-
+e_v    <- sapply(dta,mean)[1:n_obs]
 
 
 #E-step
@@ -50,10 +49,8 @@ Sigma_vv  <- subset(Sigma_etaeta,G_obs,G_obs)
 J         <- mu_eta - Sigma_etav %*% solve(Sigma_vv) %*% mu_v
 K         <- Sigma_etav %*% solve(Sigma_vv)
 
-e_v       <- e_eta[1:n_obs]
 C_vv      <- cov(dta)
 
-#estep     <- function(J=J,K=K,e_v=e_v,Sigma_etaeta=Sigma_etaeta,Sigma_vv=Sigma_vv,Sigma_veta=Sigma_veta,C_vv=C_vv,e_eta=e_eta,alpha_alpha,Beta=Beta){
 e_eta     <- J+K%*%e_v
 C_etaeta  <- Sigma_etaeta - Sigma_etav %*% solve(Sigma_vv) %*% Sigma_veta +
   J %*% t(J) + J %*% t(e_v) %*% t(K) + K %*% e_v %*% t(J) + K %*% C_vv %*% t(K)
