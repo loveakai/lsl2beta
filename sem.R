@@ -31,10 +31,9 @@ G_obs     <- c(rep(T,n_obs),rep(F,n_lat))
 v         <- subset(eta,G_obs)
 e_v    <- sapply(dta,mean)[1:n_obs]
 
-
 #E-step
 
-#zeta_tilda<- sapply(c(1:M), function(j) {solve(Phi[-j,-j]) %*% zeta[-j]})
+#
 
 estep     <- function(alpha_alpha,Beta=Beta){
 
@@ -57,9 +56,14 @@ C_etaeta  <- Sigma_etaeta - Sigma_etav %*% solve(Sigma_vv) %*% Sigma_veta +
 C_zetazeta<- C_etaeta - e_eta%*%alpha -  C_etaeta %*% t(Beta) - alpha %*% t(e_eta) +
   alpha %*% t(alpha) + alpha %*% t(e_eta) %*% t(Beta) - Beta %*% t(C_etaeta) + Beta %*% e_eta %*% t(alpha) +
   Beta %*% C_etaeta %*% t(Beta)
-#C_zeta_tildazeta <- sapply(c(1:M), function(j) {solve(Phi[-j,-j]) %*% C_zetazeta[-j,]})
-#C_zeta_tildazeta_tilda <- sapply(c(1:M), function(j) {solve(Phi[-j,-j]) %*% C_zetazeta[-j,-j] %*% solve(Phi[-j,-j])})
-return(list(e_eta=e_eta,C_etaeta=C_etaeta,C_zetazeta=C_zetazeta))
+#zeta_tilda<- sapply(c(1:M), function(j) {solve(Phi[-j,-j]) %*% zeta[-j]})
+C_zetatildazeta<- lapply(c(1:M), function(j) {solve(Phi[-j,-j])%*%C_zetazeta[-j,]})
+C_zetatildazetatilda<- lapply(c(1:M), function(j) {solve(Phi[-j,-j])%*%C_zetazeta[-j,-j]%*%solve(Phi[-j,-j])})
+return(list(e_eta=e_eta,
+            C_etaeta=C_etaeta,
+            C_zetazeta=C_zetazeta,
+            C_zetatildazeta=C_zetatildazeta,
+            C_zetatildazetatilda=C_zetatildazetatilda))
 }
 
 
