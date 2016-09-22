@@ -1,8 +1,28 @@
 library(dplyr);library(gtools)
 
+model.cfa<-'
+F1=~0.8*x1+0.8*x2+0.8*x3
+F2=~0.8*x4+0.8*x5+0.8*x6
+F3=~0.8*x7+0.8*x8+0.8*x9
+x1~~(1-0.8^2)*x1
+x2~~(1-0.8^2)*x2
+x3~~(1-0.8^2)*x3
+x4~~(1-0.8^2)*x4
+x5~~(1-0.8^2)*x5
+x6~~(1-0.8^2)*x6
+x7~~(1-0.8^2)*x7
+x8~~(1-0.8^2)*x8
+x9~~(1-0.8^2)*x9
+F2~~1*F2
+F3~~1*F3
+F1~~1*F1
+F1~~0.4*F2
+F1~~0.4*F3
+F2~~0.4*F3
+'
+
 #dta<-lavaan::HolzingerSwineford1939[,-c(1:6)]
 dta <-lavaan::simulateData(model.cfa,sample.nobs = 500L)
-
 
 n_obs<- ncol(dta)
 n_lat<- 3
@@ -13,20 +33,11 @@ M    <- n_obs + n_lat
 eta       <- vector(mode = "numeric",M)
 alpha     <- vector(mode = "numeric",M)
 Beta      <- matrix(0, ncol = M, nrow = M)
-
 eta       <- c(rep(0.5,9),rep(0.5,3))
 Beta[1:9,10:12]<-0.5
-
 zeta      <- vector(mode = "numeric",M)
-
 Phi       <- matrix(diag(0.1,M,M), ncol = M, nrow = M)
-#varphi    <- sapply(c(1:M),function(i) {phi[i]-Phi[i,-i]%*%solve(Phi[-i,-i])%*%Phi[-i,i]} )
 ide       <- diag(1, ncol = M, nrow = M)
-
-
-#mu_v      <- mu_eta[1:n_obs]
-
-
 G_obs     <- c(rep(T,n_obs),rep(F,n_lat))
 v         <- subset(eta,G_obs)
 e_v    <- sapply(dta,mean)[1:n_obs]
@@ -78,8 +89,14 @@ w_alpha   <- sapply(c(1:M), function(j) {1/(w_g*phi[j,j])})
 
 JK        <- permutations(n = M, r = 2, v = 1:M , repeats.allowed = T)
 w_beta    <- mapply(function(j,k) 1/(w_g*solve(Phi[j,j])*C_etaeta[k,k]), j=JK[,1], k=JK[,2] ,SIMPLIFY = T) %>% matrix(nrow=M,byrow=T)
+diag(w_beta)<-0
 Beta_u    <- matrix(0, ncol = M, nrow = M)
 beta_hat  <- matrix(0, ncol = M, nrow = M)
+
+varphi    <-sapply(c(1:M), function(m) {diag(Phi)[m]-Phi[m,-m]%*%solve(Phi[-m,-m])%*%Phi[-m,m]})
+
+
+w_phi     <-mapply(function(j,lk) 1/((w_g/varphi[j])*C_zetatildazetatilda[[j]][lk,lk]),j=c(1:M),lk=c(1:M-1),SIMPLIFY = T)
 
 cmstep    <- function(w_alpha=w_alpha,w_g=w_g,e_eta=e_eta,alpha_u=alpha_u,Beta=Beta,alpha=alpha,C_etaeta=C_etaeta){
   for (j in 1:M){
@@ -93,16 +110,18 @@ cmstep    <- function(w_alpha=w_alpha,w_g=w_g,e_eta=e_eta,alpha_u=alpha_u,Beta=B
                        w_g *  t(phi[j,-j]) %*% (C_etaeta[-j,k] - e_eta[k] * alpha[-j] - (Beta[-j,] + Beta_u[-j,]) %*% C_etaeta[,k]))
     }
   }
-  
+
   Beta     <- beta_hat
   alpha    <- alpha_hat
 
 return(list(Beta=Beta,alpha=alpha))
 }
 
-e_eta     <-estep(J=J,K=K,e_v=e_v,Sigma_etaeta=Sigma_etaeta,Sigma_vv=Sigma_vv,Sigma_veta=Sigma_veta,C_vv=C_vv,e_eta=e_eta,alpha=alpha,Beta=Beta)$e_eta
-C_etaeta  <-estep(J=J,K=K,e_v=e_v,Sigma_etaeta=Sigma_etaeta,Sigma_vv=Sigma_vv,Sigma_veta=Sigma_veta,C_vv=C_vv,e_eta=e_eta,alpha=alpha,Beta=Beta)$C_etaeta
-C_zetazeta<-estep(J=J,K=K,e_v=e_v,Sigma_etaeta=Sigma_etaeta,Sigma_vv=Sigma_vv,Sigma_veta=Sigma_veta,C_vv=C_vv,e_eta=e_eta,alpha=alpha,Beta=Beta)$C_zetazeta
+e_eta     <-estep(alpha=alpha,Beta=Beta)$e_eta
+C_etaeta  <-estep(alpha=alpha,Beta=Beta)$C_etaeta
+C_zetazeta<-estep(alpha=alpha,Beta=Beta)$C_zetazeta
+C_zetatildazeta<-estep(alpha=alpha,Beta=Beta)$C_zetatildazeta
+C_zetatildazetatilda<-estep(alpha=alpha,Beta=Beta)$C_zetatildazetatilda
 Beta      <-cmstep(w_alpha=w_alpha,w_g=w_g,e_eta=e_eta,alpha_u=alpha_u,Beta=Beta,alpha=alpha,C_etaeta=C_etaeta)$Beta
 alpha     <-cmstep(w_alpha=w_alpha,w_g=w_g,e_eta=e_eta,alpha_u=alpha_u,Beta=Beta,alpha=alpha,C_etaeta=C_etaeta)$alpha
 
