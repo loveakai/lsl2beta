@@ -23,7 +23,6 @@ F2~~0.4*F3
 
 #dta<-lavaan::HolzingerSwineford1939[,-c(1:6)]
 dta <-lavaan::simulateData(model.cfa,sample.nobs = 500L)
-
 n_obs<- ncol(dta)
 n_lat<- 3
 M    <- n_obs + n_lat
@@ -44,8 +43,6 @@ e_v    <- sapply(dta,mean)[1:n_obs]
 
 #E-step
 
-#
-
 estep     <- function(alpha_alpha,Beta=Beta){
 
 IBinv     <- solve(ide-Beta)
@@ -55,12 +52,9 @@ Sigma_etaeta<-IBinv%*%Phi%*%t(IBinv)
 Sigma_veta<- subset(Sigma_etaeta,G_obs)
 Sigma_etav<- t(Sigma_veta)
 Sigma_vv  <- subset(Sigma_etaeta,G_obs,G_obs)
-
 J         <- mu_eta - Sigma_etav %*% solve(Sigma_vv) %*% mu_v
 K         <- Sigma_etav %*% solve(Sigma_vv)
-
 C_vv      <- cov(dta)
-
 e_eta     <- J+K%*%e_v
 C_etaeta  <- Sigma_etaeta - Sigma_etav %*% solve(Sigma_vv) %*% Sigma_veta +
   J %*% t(J) + J %*% t(e_v) %*% t(K) + K %*% e_v %*% t(J) + K %*% C_vv %*% t(K)
@@ -86,21 +80,26 @@ alpha_u   <- vector(mode = "numeric",M)
 alpha_hat <- vector(mode = "numeric",M)
 w_alpha   <- sapply(c(1:M), function(j) {1/(w_g*phi[j,j])})
 
-
-JK        <- permutations(n = M, r = 2, v = 1:M , repeats.allowed = T)
+JK        <- expand.grid(1:M,1:M)[2:1]
 w_beta    <- mapply(function(j,k) 1/(w_g*solve(Phi[j,j])*C_etaeta[k,k]), j=JK[,1], k=JK[,2] ,SIMPLIFY = T) %>% matrix(nrow=M,byrow=T)
 diag(w_beta)<-0
-Beta_u    <- matrix(0, ncol = M, nrow = M)
-beta_hat  <- matrix(0, ncol = M, nrow = M)
+Beta_u    <- matrix(0, M, M)
+beta_hat  <- matrix(0, M, M)
 
-varphi    <-sapply(c(1:M), function(m) {diag(Phi)[m]-Phi[m,-m]%*%solve(Phi[-m,-m])%*%Phi[-m,m]})
+varphi    <- sapply(c(1:M), function(m) {diag(Phi)[m]-Phi[m,-m]%*%solve(Phi[-m,-m])%*%Phi[-m,m]})
+JLK       <- expand.grid(1:(M-1),1:M)[2:1]
+w_phi     <- matrix(0,M,M)
+w_phiq    <- mapply(function(j,lk) 1/((w_g/varphi[j])*C_zetatildazetatilda[[j]][lk,lk]),j=JLK[,1],lk=JLK[,2],SIMPLIFY = "matrix") %>% matrix(nrow=M,byrow=T)
+w_phi[upper.tri(w_phi)]<-w_phiq[upper.tri(w_phiq,diag=T)]
+w_phi[lower.tri(w_phi)]<-w_phiq[lower.tri(w_phiq)]
+Phi_u     <- matrix(0,M,M)
+Phi_hat   <- matrix(0,M,M)
 
-
-w_phi     <-mapply(function(j,lk) 1/((w_g/varphi[j])*C_zetatildazetatilda[[j]][lk,lk]),j=c(1:M),lk=c(1:M-1),SIMPLIFY = T)
+varphi_hat<- vector(mode = "numeric",M)
 
 cmstep    <- function(w_alpha=w_alpha,w_g=w_g,e_eta=e_eta,alpha_u=alpha_u,Beta=Beta,alpha=alpha,C_etaeta=C_etaeta){
   for (j in 1:M){
-    alpha_hat[j]<- w_alpha[j] * ( w_g * phi[j,j] * (e_eta[j] - alpha_u[j] - Beta[j,] %*% e_eta) + 
+    alpha_hat[j]   <- w_alpha[j] * ( w_g * phi[j,j] * (e_eta[j] - alpha_u[j] - Beta[j,] %*% e_eta) + 
                                     w_g * phi[j,-j] %*% (e_eta - alpha - alpha_u - Beta %*% e_eta)[-j])
   }
   
@@ -110,7 +109,21 @@ cmstep    <- function(w_alpha=w_alpha,w_g=w_g,e_eta=e_eta,alpha_u=alpha_u,Beta=B
                        w_g *  t(phi[j,-j]) %*% (C_etaeta[-j,k] - e_eta[k] * alpha[-j] - (Beta[-j,] + Beta_u[-j,]) %*% C_etaeta[,k]))
     }
   }
+  
+  for (j in 1:M){
+    for ( k in 1:M){
+      if (j==k) (Phi_hat[j,k]<-Phi[j,k])
+      else {
+       if (k<j) (lk<-k) else (lk<-c(k-1))
+        Phi_hat[j,k]<- w_phi[j,k] * (w_g / phi[j,j]) * (C_zetatildazeta[[j]][lk,j] - Phi[j,-c(j,k)] %*% matrix(C_zetatildazetatilda[[j]][-lk,lk],c(M-2),1) - 
+                                                       Phi_u[j,-j] %*% C_zetatildazetatilda[[j]][,lk])
+      }
+    }
+  }
 
+  for (j in 1:M){
+    varphi_hat[j] <- w_g * (C_zetazeta[j,j] - 2 * Phi[j,-j] %*% C_zetatildazeta[[j]][,j] + Phi[j,-j] %*% C_zetatildazetatilda[[j]] %*% Phi[-j,j])
+  }
   Beta     <- beta_hat
   alpha    <- alpha_hat
 
