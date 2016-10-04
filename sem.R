@@ -43,7 +43,7 @@ e_v    <- sapply(dta,mean)[1:n_obs]
 
 #E-step
 
-estep     <- function(alpha_alpha,Beta=Beta){
+estep     <- function(alpha=alpha,Beta=Beta){
 
 IBinv     <- solve(ide-Beta)
 mu_eta    <- IBinv%*%alpha
@@ -75,29 +75,35 @@ return(list(e_eta=e_eta,
 #CM
 
 w_g       <- 1
-phi       <- solve(Phi)
 alpha_u   <- vector(mode = "numeric",M)
 alpha_hat <- vector(mode = "numeric",M)
-w_alpha   <- sapply(c(1:M), function(j) {1/(w_g*phi[j,j])})
-
 JK        <- expand.grid(1:M,1:M)[2:1]
-w_beta    <- mapply(function(j,k) 1/(w_g*solve(Phi[j,j])*C_etaeta[k,k]), j=JK[,1], k=JK[,2] ,SIMPLIFY = T) %>% matrix(nrow=M,byrow=T)
-diag(w_beta)<-0
+JLK       <- expand.grid(1:(M-1),1:M)[2:1]
 Beta_u    <- matrix(0, M, M)
 beta_hat  <- matrix(0, M, M)
-
-varphi    <- sapply(c(1:M), function(m) {diag(Phi)[m]-Phi[m,-m]%*%solve(Phi[-m,-m])%*%Phi[-m,m]})
-JLK       <- expand.grid(1:(M-1),1:M)[2:1]
-w_phi     <- matrix(0,M,M)
-w_phiq    <- mapply(function(j,lk) 1/((w_g/varphi[j])*C_zetatildazetatilda[[j]][lk,lk]),j=JLK[,1],lk=JLK[,2],SIMPLIFY = "matrix") %>% matrix(nrow=M,byrow=T)
-w_phi[upper.tri(w_phi)]<-w_phiq[upper.tri(w_phiq,diag=T)]
-w_phi[lower.tri(w_phi)]<-w_phiq[lower.tri(w_phiq)]
-Phi_u     <- matrix(0,M,M)
-Phi_hat   <- matrix(0,M,M)
-
+Phi_u     <- matrix(0, M, M)
+Phi_hat   <- matrix(0, M, M)
 varphi_hat<- vector(mode = "numeric",M)
 
-cmstep    <- function(w_alpha=w_alpha,w_g=w_g,e_eta=e_eta,alpha_u=alpha_u,Beta=Beta,alpha=alpha,C_etaeta=C_etaeta){
+cmstep    <- function(w_g=w_g,
+                      alpha_u=alpha_u,
+                      Beta_u=Beta_u,
+                      Phi=Phi,
+                      e_eta=e_eta,C_etaeta=C_etaeta,
+                      C_zetazeta=C_zetazeta,
+                      C_zetatildazeta=C_zetatildazeta,
+                      C_zetatildazetatilda=C_zetatildazetatilda){
+  
+  phi       <- solve(Phi)
+  varphi    <- sapply(c(1:M), function(m) {diag(Phi)[m]-Phi[m,-m]%*%solve(Phi[-m,-m])%*%Phi[-m,m]})
+  w_alpha   <- sapply(c(1:M), function(j) {1/(w_g*phi[j,j])})
+  w_beta    <- mapply(function(j,k) 1/(w_g*solve(Phi[j,j])*C_etaeta[k,k]), j=JK[,1], k=JK[,2] ,SIMPLIFY = T) %>% matrix(nrow=M,byrow=T)
+  diag(w_beta)<-0
+  w_phi     <- matrix(0, M, M)
+  w_phiq    <- mapply(function(j,lk) 1/((w_g/varphi[j])*C_zetatildazetatilda[[j]][lk,lk]),j=JLK[,1],lk=JLK[,2],SIMPLIFY = "matrix") %>% matrix(nrow=M,byrow=T)
+  w_phi[upper.tri(w_phi)]<-w_phiq[upper.tri(w_phiq,diag=T)]
+  w_phi[lower.tri(w_phi)]<-w_phiq[lower.tri(w_phiq)]
+  
   for (j in 1:M){
     alpha_hat[j]   <- w_alpha[j] * ( w_g * phi[j,j] * (e_eta[j] - alpha_u[j] - Beta[j,] %*% e_eta) + 
                                     w_g * phi[j,-j] %*% (e_eta - alpha - alpha_u - Beta %*% e_eta)[-j])
@@ -124,27 +130,30 @@ cmstep    <- function(w_alpha=w_alpha,w_g=w_g,e_eta=e_eta,alpha_u=alpha_u,Beta=B
   for (j in 1:M){
     varphi_hat[j] <- w_g * (C_zetazeta[j,j] - 2 * Phi[j,-j] %*% C_zetatildazeta[[j]][,j] + Phi[j,-j] %*% C_zetatildazetatilda[[j]] %*% Phi[-j,j])
   }
+  
   Beta     <- beta_hat
   alpha    <- alpha_hat
+  Phi      <- Phi_hat
+  varphi   <- varphi_hat
 
-return(list(Beta=Beta,alpha=alpha))
+return(list(Beta=Beta,alpha=alpha,Phi=Phi,varphi=varphi))
 }
 
-e_eta     <-estep(alpha=alpha,Beta=Beta)$e_eta
-C_etaeta  <-estep(alpha=alpha,Beta=Beta)$C_etaeta
-C_zetazeta<-estep(alpha=alpha,Beta=Beta)$C_zetazeta
-C_zetatildazeta<-estep(alpha=alpha,Beta=Beta)$C_zetatildazeta
-C_zetatildazetatilda<-estep(alpha=alpha,Beta=Beta)$C_zetatildazetatilda
-Beta      <-cmstep(w_alpha=w_alpha,w_g=w_g,e_eta=e_eta,alpha_u=alpha_u,Beta=Beta,alpha=alpha,C_etaeta=C_etaeta)$Beta
-alpha     <-cmstep(w_alpha=w_alpha,w_g=w_g,e_eta=e_eta,alpha_u=alpha_u,Beta=Beta,alpha=alpha,C_etaeta=C_etaeta)$alpha
-
-tryy<-function(){
-  e_eta     <-estep(J=J,K=K,e_v=e_v,Sigma_etaeta=Sigma_etaeta,Sigma_vv=Sigma_vv,Sigma_veta=Sigma_veta,C_vv=C_vv,e_eta=e_eta,alpha=alpha,Beta=Beta)$e_eta
-  C_etaeta  <-estep(J=J,K=K,e_v=e_v,Sigma_etaeta=Sigma_etaeta,Sigma_vv=Sigma_vv,Sigma_veta=Sigma_veta,C_vv=C_vv,e_eta=e_eta,alpha=alpha,Beta=Beta)$C_etaeta
-  C_zetazeta<-estep(J=J,K=K,e_v=e_v,Sigma_etaeta=Sigma_etaeta,Sigma_vv=Sigma_vv,Sigma_veta=Sigma_veta,C_vv=C_vv,e_eta=e_eta,alpha=alpha,Beta=Beta)$C_zetazeta
-  Beta      <-cmstep(w_alpha=w_alpha,w_g=w_g,e_eta=e_eta,alpha_u=alpha_u,Beta=Beta,alpha=alpha,C_etaeta=C_etaeta)$Beta
-  alpha     <-cmstep(w_alpha=w_alpha,w_g=w_g,e_eta=e_eta,alpha_u=alpha_u,Beta=Beta,alpha=alpha,C_etaeta=C_etaeta)$alpha
-  list(C_zetazeta=C_zetazeta,Beta=Beta,alpha=alpha)
-  }
-
-list(C_zetazeta=C_zetazeta,Beta=Beta,alpha=alpha)
+# e_eta     <-estep(alpha=alpha,Beta=Beta)$e_eta
+# C_etaeta  <-estep(alpha=alpha,Beta=Beta)$C_etaeta
+# C_zetazeta<-estep(alpha=alpha,Beta=Beta)$C_zetazeta
+# C_zetatildazeta<-estep(alpha=alpha,Beta=Beta)$C_zetatildazeta
+# C_zetatildazetatilda<-estep(alpha=alpha,Beta=Beta)$C_zetatildazetatilda
+# Beta      <-cmstep(w_alpha=w_alpha,w_g=w_g,e_eta=e_eta,alpha_u=alpha_u,Beta=Beta,alpha=alpha,C_etaeta=C_etaeta)$Beta
+# alpha     <-cmstep(w_alpha=w_alpha,w_g=w_g,e_eta=e_eta,alpha_u=alpha_u,Beta=Beta,alpha=alpha,C_etaeta=C_etaeta)$alpha
+# 
+# tryy<-function(){
+#   e_eta     <-estep(J=J,K=K,e_v=e_v,Sigma_etaeta=Sigma_etaeta,Sigma_vv=Sigma_vv,Sigma_veta=Sigma_veta,C_vv=C_vv,e_eta=e_eta,alpha=alpha,Beta=Beta)$e_eta
+#   C_etaeta  <-estep(J=J,K=K,e_v=e_v,Sigma_etaeta=Sigma_etaeta,Sigma_vv=Sigma_vv,Sigma_veta=Sigma_veta,C_vv=C_vv,e_eta=e_eta,alpha=alpha,Beta=Beta)$C_etaeta
+#   C_zetazeta<-estep(J=J,K=K,e_v=e_v,Sigma_etaeta=Sigma_etaeta,Sigma_vv=Sigma_vv,Sigma_veta=Sigma_veta,C_vv=C_vv,e_eta=e_eta,alpha=alpha,Beta=Beta)$C_zetazeta
+#   Beta      <-cmstep(w_alpha=w_alpha,w_g=w_g,e_eta=e_eta,alpha_u=alpha_u,Beta=Beta,alpha=alpha,C_etaeta=C_etaeta)$Beta
+#   alpha     <-cmstep(w_alpha=w_alpha,w_g=w_g,e_eta=e_eta,alpha_u=alpha_u,Beta=Beta,alpha=alpha,C_etaeta=C_etaeta)$alpha
+#   list(C_zetazeta=C_zetazeta,Beta=Beta,alpha=alpha)
+#   }
+# 
+# list(C_zetazeta=C_zetazeta,Beta=Beta,alpha=alpha)
