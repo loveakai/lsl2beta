@@ -27,19 +27,81 @@ n_obs<- ncol(dta)
 n_lat<- 3
 M    <- n_obs + n_lat
 
+matgen<-function(alpha,Beta,Phi){}
+
+
+#pattern matarices generation
+#only 3 matrices have pattern matrix, including alpha, beta, Phi
+# 
+# if (missing(pattern) | is.null(pattern$lambda)) {
+#   stop("lambda matrix in pattern is not specified")
+# }
+
+if (is.null(alpha_p)) {
+  alpha_p <- c(rep(0,n_obs),rep(1,n_lat))
+}
+
+if (is.null(Beta_p)) {
+  Beta_p              <- matrix(0, ncol = M, nrow = M) 
+  Beta_p[1:9,10:12]   <-1
+  Beta_p[10:12,10:12] <-diag(1,n_lat,n_lat)
+}
+
+if (is.null(Phi)) {
+  Phi <- matrix(diag(0.1,M,M), ncol = M, nrow = M)
+}
+
+
+
+
+
+
+
+
+
+
 #matrices generation
 
+if (missing(value)) {
+  value <- list()
+  value$lambda <- 1*(.is_one(pattern$lambda))
+}
+if (is.null(value$lambda)) {
+  value$lambda <- 1*(.is_one(pattern$lambda))
+}
+
+if (is.null(value$psi)) {
+  value$psi <- diag(.1, dim(pattern$lambda)[1])
+}
+if (is.null(value$beta)) {
+  value$beta <- matrix(0, dim(pattern$lambda)[2], dim(pattern$lambda)[2])
+}
+if (is.null(value$phi)) {
+  value$phi <- diag(1, dim(pattern$lambda)[2])
+}
+if (is.null(value$nu)) {
+  value$nu <- matrix(0, dim(pattern$lambda)[1], 1)
+}
+if (is.null(value$alpha)) {
+  value$alpha <- matrix(0, dim(pattern$lambda)[2], 1)
+}
+
+
 eta       <- vector(mode = "numeric",M)
+
 alpha     <- vector(mode = "numeric",M)
+alpha[1:9]<- 1
 Beta      <- matrix(0, ncol = M, nrow = M)
 eta       <- c(rep(0.5,9),rep(0.5,3))
-Beta[1:9,10:12]<-0.5
+Beta[2:9,10:12]<-1
 zeta      <- vector(mode = "numeric",M)
 Phi       <- matrix(diag(0.1,M,M), ncol = M, nrow = M)
+Phi[10:12,10:12]<-0.1
 ide       <- diag(1, ncol = M, nrow = M)
 G_obs     <- c(rep(T,n_obs),rep(F,n_lat))
 v         <- subset(eta,G_obs)
 e_v       <- sapply(dta,mean)[1:n_obs]
+Sigma     <- cov(dta)
 
 #E-step
 
