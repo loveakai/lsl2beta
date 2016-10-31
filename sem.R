@@ -146,9 +146,9 @@ cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,alpha_u=alpha_u,Beta_u=Beta_u,Phi_u=
 
 Beta_p    <- matrix(0, ncol = M, nrow = M)
 Beta_p[c(1,2,3), 10] <- Beta_p[c(4,5,6), 11] <- Beta_p[c(7,8,9), 12] <- 1
+Beta      <- Beta <- 1*.is_one(Beta_p)
 
-
-mat       <- matgen(Beta_p = Beta_p)
+mat       <- matgen(Beta_p = Beta_p,Beta=Beta)
 
 eta       <- vector(mode = "numeric",M)
 eta       <- c(rep(0.5,9),rep(0.5,3))
@@ -188,7 +188,7 @@ ecm       <- function(mat=mat,ide=ide,G_obs=G_obs){
             
             ini       <- list(IBinv=IBinv,mu_eta=mu_eta,Sigma_etaeta=Sigma_etaeta,G_obs=G_obs,Sigma=Sigma,e_v=e_v,mat=mat)
             
-            for (it in 1:10){
+            for (it in 1:1000){
             e_step    <- estep(ini)
             cm_step   <- cmstep(w_g=w_g,JK=JK,JLK=JLK,alpha_u=alpha_u,Beta_u=Beta_u,Phi_u=Phi_u,mat=ini$mat,e_step=e_step)
             ini$IBinv          <- solve(ide-cm_step$Beta)
