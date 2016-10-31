@@ -192,26 +192,26 @@ ecm       <- function(mat=mat,ide=ide,G_obs=G_obs){
 ls(e_step)
 
  
- tryy<-function(){
-   
-   e_eta     <-estep(alpha=alpha,Beta=Beta)$e_eta
-   C_etaeta  <-estep(alpha=alpha,Beta=Beta)$C_etaeta
-   C_zetazeta<-estep(alpha=alpha,Beta=Beta)$C_zetazeta
-   C_zetatildazeta<-estep(alpha=alpha,Beta=Beta)$C_zetatildazeta
-   C_zetatildazetatilda<-estep(alpha=alpha,Beta=Beta)$C_zetatildazetatilda
-   Beta      <-cmstep(w_g=w_g,alpha_u=alpha_u,Beta_u=Beta_u,Phi=Phi,e_eta=e_eta,C_etaeta=C_etaeta,C_zetazeta=C_zetazeta,C_zetatildazeta=C_zetatildazeta,
-                      C_zetatildazetatilda=C_zetatildazetatilda)$Beta
-   alpha     <-cmstep(w_g=w_g,alpha_u=alpha_u,Beta_u=Beta_u,Phi=Phi,e_eta=e_eta,C_etaeta=C_etaeta,C_zetazeta=C_zetazeta,C_zetatildazeta=C_zetatildazeta,
-                      C_zetatildazetatilda=C_zetatildazetatilda)$alpha
-   Phi       <-cmstep(w_g=w_g,alpha_u=alpha_u,Beta_u=Beta_u,Phi=Phi,e_eta=e_eta,C_etaeta=C_etaeta,C_zetazeta=C_zetazeta,C_zetatildazeta=C_zetatildazeta,
-                      C_zetatildazetatilda=C_zetatildazetatilda)$Phi
-   varphi    <-cmstep(w_g=w_g,alpha_u=alpha_u,Beta_u=Beta_u,Phi=Phi,e_eta=e_eta,C_etaeta=C_etaeta,C_zetazeta=C_zetazeta,C_zetatildazeta=C_zetatildazeta,
-                      C_zetatildazetatilda=C_zetatildazetatilda)$varphi
-   
-   list(e_eta=e_eta,C_etaeta=C_etaeta,C_zetazeta=C_zetazeta,C_zetatildazeta=C_zetatildazeta,
-        C_zetatildazetatilda=C_zetatildazetatilda,Beta=Beta,alpha=alpha,Phi=Phi,varphi=varphi)
-   }
- 
-# list(C_zetazeta=C_zetazeta,Beta=Beta,alpha=alpha)
- tryy()$Beta
+#  tryy<-function(){
+#    
+#    e_eta     <-estep(alpha=alpha,Beta=Beta)$e_eta
+#    C_etaeta  <-estep(alpha=alpha,Beta=Beta)$C_etaeta
+#    C_zetazeta<-estep(alpha=alpha,Beta=Beta)$C_zetazeta
+#    C_zetatildazeta<-estep(alpha=alpha,Beta=Beta)$C_zetatildazeta
+#    C_zetatildazetatilda<-estep(alpha=alpha,Beta=Beta)$C_zetatildazetatilda
+#    Beta      <-cmstep(w_g=w_g,alpha_u=alpha_u,Beta_u=Beta_u,Phi=Phi,e_eta=e_eta,C_etaeta=C_etaeta,C_zetazeta=C_zetazeta,C_zetatildazeta=C_zetatildazeta,
+#                       C_zetatildazetatilda=C_zetatildazetatilda)$Beta
+#    alpha     <-cmstep(w_g=w_g,alpha_u=alpha_u,Beta_u=Beta_u,Phi=Phi,e_eta=e_eta,C_etaeta=C_etaeta,C_zetazeta=C_zetazeta,C_zetatildazeta=C_zetatildazeta,
+#                       C_zetatildazetatilda=C_zetatildazetatilda)$alpha
+#    Phi       <-cmstep(w_g=w_g,alpha_u=alpha_u,Beta_u=Beta_u,Phi=Phi,e_eta=e_eta,C_etaeta=C_etaeta,C_zetazeta=C_zetazeta,C_zetatildazeta=C_zetatildazeta,
+#                       C_zetatildazetatilda=C_zetatildazetatilda)$Phi
+#    varphi    <-cmstep(w_g=w_g,alpha_u=alpha_u,Beta_u=Beta_u,Phi=Phi,e_eta=e_eta,C_etaeta=C_etaeta,C_zetazeta=C_zetazeta,C_zetatildazeta=C_zetatildazeta,
+#                       C_zetatildazetatilda=C_zetatildazetatilda)$varphi
+#    
+#    list(e_eta=e_eta,C_etaeta=C_etaeta,C_zetazeta=C_zetazeta,C_zetatildazeta=C_zetatildazeta,
+#         C_zetatildazetatilda=C_zetatildazetatilda,Beta=Beta,alpha=alpha,Phi=Phi,varphi=varphi)
+#    }
+#  
+# # list(C_zetazeta=C_zetazeta,Beta=Beta,alpha=alpha)
+#  tryy()$Beta
  
