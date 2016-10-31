@@ -135,7 +135,11 @@ cmstep    <- function(w_g=w_g,alpha_u=alpha_u,Beta_u=Beta_u,mat=mat,e_step=e_ste
   return(list(Beta=Beta,alpha=alpha,Phi=Phi,varphi=varphi))
 }
 
-mat       <- matgen()
+Beta_p    <- matrix(0, ncol = M, nrow = M)
+Beta_p[c(1,2,3), 10] <- Beta_p[c(4,5,6), 11] <- Beta_p[c(7,8,9), 12] <- 1
+
+
+mat       <- matgen(Beta_p = Beta_p)
 
 eta       <- vector(mode = "numeric",M)
 eta       <- c(rep(0.5,9),rep(0.5,3))
