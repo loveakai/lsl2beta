@@ -109,12 +109,10 @@ cmstep    <- function(w_g=w_g,alpha_u=alpha_u,Beta_u=Beta_u,mat=mat,e_step=e_ste
     }
   }
   
-  if (any(!.is_est(Phi_p))) {Phi_hat<-Phi}
-  else {
+  if (all(!.is_est(Phi_p))) {Phi_hat<-Phi}  else {
     for (j in which(.is_est(Phi_p),arr.ind = T)[,1]){
       for ( k in which(.is_est(Phi_p),arr.ind = T)[,2]){
-        if (j==k) (Phi_hat[j,k]<-Phi[j,k])
-        else {
+        if (j==k) (Phi_hat[j,k]<-Phi[j,k])  else {
           if (k<j) (lk<-k) else (lk<-c(k-1))
           Phi_hat[j,k]<- w_phi[j,k] * (w_g / phi[j,j]) * (C_zetatildazeta[[j]][lk,j] - Phi[j,-c(j,k)] %*% matrix(C_zetatildazetatilda[[j]][-lk,lk],c(M-2),1) - 
                                                             Phi_u[j,-j] %*% C_zetatildazetatilda[[j]][,lk])
@@ -124,15 +122,15 @@ cmstep    <- function(w_g=w_g,alpha_u=alpha_u,Beta_u=Beta_u,mat=mat,e_step=e_ste
   }
   
   for (j in 1:M){
-    varphi_hat[j] <- w_g * (C_zetazeta[j,j] - 2 * Phi[j,-j] %*% C_zetatildazeta[[j]][,j] + Phi[j,-j] %*% C_zetatildazetatilda[[j]] %*% Phi[-j,j])
+    Phi_hat[j,j] <- w_g * (C_zetazeta[j,j] - 2 * Phi[j,-j] %*% C_zetatildazeta[[j]][,j] + Phi[j,-j] %*% C_zetatildazetatilda[[j]] %*% Phi[-j,j]) +
+      Phi_hat[j,-j] %*% solve(Phi_hat[-j,-j]) %*% Phi_hat[-j,j]
   }
-  
+ 
   Beta     <- beta_hat
   alpha    <- alpha_hat
   Phi      <- Phi_hat
-  varphi   <- varphi_hat
   
-  return(list(Beta=Beta,alpha=alpha,Phi=Phi,varphi=varphi))
+  return(list(Beta=Beta,alpha=alpha,Phi=Phi))
 }
 
 Beta_p    <- matrix(0, ncol = M, nrow = M)
@@ -186,7 +184,6 @@ ecm       <- function(mat=mat,ide=ide,G_obs=G_obs){
             ini$mat$value$alpha<-cm_step$alpha
             ini$mat$value$Phi <- cm_step$Phi
             }
-            
 }
 
 ls(e_step)
