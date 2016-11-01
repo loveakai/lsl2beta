@@ -34,13 +34,16 @@ matgen    <- function(alpha_p,Beta_p,Phi_p,alpha,Beta,Phi,scale=T){
               #pattern matarices generation
               #only 3 matrices have pattern matrix, including alpha, beta, Phi
               
-                if (missing(alpha_p)) {alpha_p <- c(rep(0,n_obs),rep(1,n_lat))}
+                if (missing(alpha_p)) {   alpha_p <- c(rep(1,n_obs),rep(0,n_lat))}
                 if (missing(Beta_p)) {
-                  Beta_p              <- matrix(0, ncol = M, nrow = M) 
-                  Beta_p[1:n_obs,(n_obs+1):M]   <-1
-                  Beta_p[(n_obs+1):M,(n_obs+1):M] <-diag(1,n_lat,n_lat)
+                  Beta_p                          <- matrix(0, ncol = M, nrow = M) 
+                  Beta_p[1:n_obs,(n_obs+1):M]     <- 1
+                  Beta_p[(n_obs+1):M,(n_obs+1):M] <- diag(1,n_lat,n_lat)
                 }
-                if (missing(Phi_p)) {Phi_p <- matrix(diag(1,M,M), ncol = M, nrow = M)}
+                if (missing(Phi_p)) {
+                  Phi_p                           <- matrix(diag(1,M,M), ncol = M, nrow = M)
+                  Phi_p[(n_obs+1):M,(n_obs+1):M]  <- 1
+                }
                 
               #matrices generation
               
@@ -106,13 +109,6 @@ cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,alpha_u=alpha_u,Beta_u=Beta_u,Phi_u=
                                        w_g * phi[j,-j] %*% (e_eta - alpha - alpha_u - Beta %*% e_eta)[-j])
   }
   
-  # for (j in which(.is_est(mat$pattern$Beta_p),arr.ind = T)[,1]){
-  #   for (k in which(.is_est(mat$pattern$Beta_p),arr.ind = T)[,2]){
-  #     Beta[j,k]<- w_beta[j,k] * (w_g * phi[j,j] * (C_etaeta[j,k] - e_eta[k] * alpha[j] - Beta[j,-k] %*% C_etaeta[k,-k] - Beta_u[j,] %*% C_etaeta[,k])+
-  #                                      w_g *  t(phi[j,-j]) %*% (C_etaeta[-j,k] - e_eta[k] * alpha[-j] - (Beta[-j,] + Beta_u[-j,]) %*% C_etaeta[,k]))
-  #   }
-  # }
-  # 
   
   for (i in which(.is_est(mat$pattern$Beta_p))){
     k      <- ceiling(i/M)
@@ -165,7 +161,7 @@ ecm       <- function(mat=mat,ide=ide,G_obs=G_obs){
             Phi_p     <- mat$pattern$Phi_p
             alpha     <- mat$value$alpha
             Beta      <- mat$value$Beta
-            Phi       <- mat$pattern$Phi_p
+            Phi       <- mat$value$Phi
             #model-implied matrix
             
             IBinv     <- solve(ide-Beta)
@@ -188,20 +184,46 @@ ecm       <- function(mat=mat,ide=ide,G_obs=G_obs){
             
             ini       <- list(IBinv=IBinv,mu_eta=mu_eta,Sigma_etaeta=Sigma_etaeta,G_obs=G_obs,Sigma=Sigma,e_v=e_v,mat=mat)
             
-            for (it in 1:1000){
-            e_step    <- estep(ini)
-            cm_step   <- cmstep(w_g=w_g,JK=JK,JLK=JLK,alpha_u=alpha_u,Beta_u=Beta_u,Phi_u=Phi_u,mat=ini$mat,e_step=e_step)
-            ini$IBinv          <- solve(ide-cm_step$Beta)
-            ini$mu_eta         <- IBinv%*%cm_step$alpha
-            ini$Sigma_etaeta   <- IBinv%*%cm_step$Phi%*%t(IBinv)
-            ini$mat$value$Beta <- cm_step$Beta
-            ini$mat$value$alpha<- cm_step$alpha
-            ini$mat$value$Phi  <- cm_step$Phi
-            print(cm_step$Beta)
+            
+            
+            for (it in 1:100){
+              e_step    <- estep(ini)
+              cm_step   <- cmstep(w_g=w_g,JK=JK,JLK=JLK,alpha_u=alpha_u,Beta_u=Beta_u,Phi_u=Phi_u,mat=ini$mat,e_step=e_step)
+              ini$IBinv          <- solve(ide-cm_step$Beta)
+              ini$mu_eta         <- IBinv%*%cm_step$alpha
+              ini$Sigma_etaeta   <- IBinv%*%cm_step$Phi%*%t(IBinv)
+              ini$mat$value$Beta <- cm_step$Beta
+              ini$mat$value$alpha<- cm_step$alpha
+              ini$mat$value$Phi  <- cm_step$Phi
+              print(cm_step$Beta)
             }
+            
+            theta     <- c(cm_step$alpha[.is_est(ini$mat$pattern$alpha_p)],cm_step$Beta[.is_est(ini$mat$pattern$Beta_p)],cm_step$Phi[.is_est(ini$mat$pattern$Phi_p)])
+            length(theta)
+            
+            # stp=FALSE
+            # for (it in 1:1000){
+            #   if (stp == F                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       ALSE){
+            # e_step    <- estep(ini)
+            # cm_step   <- cmstep(w_g=w_g,JK=JK,JLK=JLK,alpha_u=alpha_u,Beta_u=Beta_u,Phi_u=Phi_u,mat=ini$mat,e_step=e_step)
+            # ini$IBinv          <- solve(ide-cm_step$Beta)
+            # ini$mu_eta         <- IBinv%*%cm_step$alpha
+            # ini$Sigma_etaeta   <- IBinv%*%cm_step$Phi%*%t(IBinv)
+            # ini$mat$value$Beta <- cm_step$Beta
+            # ini$mat$value$alpha<- cm_step$alpha
+            # ini$mat$value$Phi  <- cm_step$Phi
+            # print(paste0(it,"..."))} else {
+            # print("done!")
+            # print(cm_step$Beta)
+            # break
+            #   }
+            # }
 }
 
 ls(e_step)
+
+
+
 
  
 #  tryy<-function(){
