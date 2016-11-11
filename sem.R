@@ -29,21 +29,30 @@ M         <- n_obs + n_lat
 Sigma     <- cov(dta)
 e_v       <- sapply(dta,mean)[1:n_obs]
 
-matgen    <- function(alpha_p,Beta_p,Phi_p,alpha,Beta,Phi,scale=T){
+betagen   <- function(lambda){
+                 Beta_p                          <- matrix(0, ncol = M, nrow = M)
+                 Beta_p[(1:n_obs),(n_obs+1):M]   <- lambda
+                 Beta_p[(n_obs+1):M,(n_obs+1):M] <- diag(1,n_lat,n_lat)
+                 return(Beta_p)
+}
+
+matgen    <- function(alpha_p,Beta_p,Phi_p,alpha,Beta,Phi,lambda,scale=T){
 
               #pattern matarices generation
               #only 3 matrices have pattern matrix, including alpha, beta, Phi
               
                 if (missing(alpha_p)) {   alpha_p <- c(rep(1,n_obs),rep(0,n_lat))}
                 if (missing(Beta_p)) {
-                  Beta_p                          <- matrix(0, ncol = M, nrow = M) 
-                  Beta_p[1:n_obs,(n_obs+1):M]     <- 1
-                  Beta_p[(n_obs+1):M,(n_obs+1):M] <- diag(1,n_lat,n_lat)
-                }
+                  if (missing(lambda)) { 
+                    stop("lambda matrix is not specified")
+                    } else { 
+                      Beta_p                      <- betagen(lambda)
+                    }
+                  }
                 if (missing(Phi_p)) {
                   Phi_p                           <- matrix(diag(1,M,M), ncol = M, nrow = M)
                   Phi_p[(n_obs+1):M,(n_obs+1):M]  <- 1
-                }
+                  }
                 
               #matrices generation
               
@@ -140,11 +149,20 @@ cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,alpha_u=alpha_u,Beta_u=Beta_u,Phi_u=
   return(list(Beta=Beta,alpha=alpha,Phi=Phi))
 }
 
+dml_cal   <- function(Sigma=Sigma,e_v=e_v,Sigma_vv=subset(ini$Sigma_etaeta,G_obs,G_obs),mu_v=subset(ini$mu_eta,G_obs)){
+  Sigma_vv_iv <- solve(Sigma_vv)
+  dml <- -log(det(Sigma_vv_iv %*% Sigma)) + sum(diag(Sigma_vv_iv%*%Sigma)) - dim(Sigma_vv)[1] + t(e_v-mu_v) %*% Sigma_vv_iv %*% (e_v-mu_v)
+  return(dml)
+  
+}
+
 Beta_p    <- matrix(0, ncol = M, nrow = M)
 Beta_p[c(1,2,3), 10] <- Beta_p[c(4,5,6), 11] <- Beta_p[c(7,8,9), 12] <- 1
 Beta      <- Beta <- 1*.is_one(Beta_p)
 
 mat       <- matgen(Beta_p = Beta_p,Beta=Beta)
+
+matgen(lambda=lambda)
 
 eta       <- vector(mode = "numeric",M)
 eta       <- c(rep(0.5,9),rep(0.5,3))
@@ -168,9 +186,6 @@ ecm       <- function(mat=mat,ide=ide,G_obs=G_obs){
             mu_eta    <- IBinv%*%alpha
             Sigma_etaeta<-IBinv%*%Phi%*%t(IBinv)
             
-            #Sigma     <- Sigma
-            #e_v       <- e_v
-            
             w_g       <- 1
             alpha_u   <- vector(mode = "numeric",M)
             alpha_hat <- vector(mode = "numeric",M)
@@ -183,9 +198,7 @@ ecm       <- function(mat=mat,ide=ide,G_obs=G_obs){
             varphi_hat<- vector(mode = "numeric",M)
             
             ini       <- list(IBinv=IBinv,mu_eta=mu_eta,Sigma_etaeta=Sigma_etaeta,G_obs=G_obs,Sigma=Sigma,e_v=e_v,mat=mat)
-            
-            
-            
+ 
             for (it in 1:100){
               e_step    <- estep(ini)
               cm_step   <- cmstep(w_g=w_g,JK=JK,JLK=JLK,alpha_u=alpha_u,Beta_u=Beta_u,Phi_u=Phi_u,mat=ini$mat,e_step=e_step)
@@ -195,11 +208,12 @@ ecm       <- function(mat=mat,ide=ide,G_obs=G_obs){
               ini$mat$value$Beta <- cm_step$Beta
               ini$mat$value$alpha<- cm_step$alpha
               ini$mat$value$Phi  <- cm_step$Phi
-              print(cm_step$Beta)
             }
             
             theta     <- c(cm_step$alpha[.is_est(ini$mat$pattern$alpha_p)],cm_step$Beta[.is_est(ini$mat$pattern$Beta_p)],cm_step$Phi[.is_est(ini$mat$pattern$Phi_p)])
             length(theta)
+            
+            dml_cal(Sigma=Sigma,e_v=e_v,Sigma_vv=subset(ini$Sigma_etaeta,G_obs,G_obs),mu_v=subset(ini$mu_eta,G_obs))
             
             # stp=FALSE
             # for (it in 1:1000){
@@ -221,31 +235,3 @@ ecm       <- function(mat=mat,ide=ide,G_obs=G_obs){
 }
 
 ls(e_step)
-
-
-
-
- 
-#  tryy<-function(){
-#    
-#    e_eta     <-estep(alpha=alpha,Beta=Beta)$e_eta
-#    C_etaeta  <-estep(alpha=alpha,Beta=Beta)$C_etaeta
-#    C_zetazeta<-estep(alpha=alpha,Beta=Beta)$C_zetazeta
-#    C_zetatildazeta<-estep(alpha=alpha,Beta=Beta)$C_zetatildazeta
-#    C_zetatildazetatilda<-estep(alpha=alpha,Beta=Beta)$C_zetatildazetatilda
-#    Beta      <-cmstep(w_g=w_g,alpha_u=alpha_u,Beta_u=Beta_u,Phi=Phi,e_eta=e_eta,C_etaeta=C_etaeta,C_zetazeta=C_zetazeta,C_zetatildazeta=C_zetatildazeta,
-#                       C_zetatildazetatilda=C_zetatildazetatilda)$Beta
-#    alpha     <-cmstep(w_g=w_g,alpha_u=alpha_u,Beta_u=Beta_u,Phi=Phi,e_eta=e_eta,C_etaeta=C_etaeta,C_zetazeta=C_zetazeta,C_zetatildazeta=C_zetatildazeta,
-#                       C_zetatildazetatilda=C_zetatildazetatilda)$alpha
-#    Phi       <-cmstep(w_g=w_g,alpha_u=alpha_u,Beta_u=Beta_u,Phi=Phi,e_eta=e_eta,C_etaeta=C_etaeta,C_zetazeta=C_zetazeta,C_zetatildazeta=C_zetatildazeta,
-#                       C_zetatildazetatilda=C_zetatildazetatilda)$Phi
-#    varphi    <-cmstep(w_g=w_g,alpha_u=alpha_u,Beta_u=Beta_u,Phi=Phi,e_eta=e_eta,C_etaeta=C_etaeta,C_zetazeta=C_zetazeta,C_zetatildazeta=C_zetatildazeta,
-#                       C_zetatildazetatilda=C_zetatildazetatilda)$varphi
-#    
-#    list(e_eta=e_eta,C_etaeta=C_etaeta,C_zetazeta=C_zetazeta,C_zetatildazeta=C_zetatildazeta,
-#         C_zetatildazetatilda=C_zetatildazetatilda,Beta=Beta,alpha=alpha,Phi=Phi,varphi=varphi)
-#    }
-#  
-# # list(C_zetazeta=C_zetazeta,Beta=Beta,alpha=alpha)
-#  tryy()$Beta
- 
