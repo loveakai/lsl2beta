@@ -156,6 +156,11 @@ dml_cal   <- function(Sigma=Sigma,e_v=e_v,Sigma_vv=subset(ini$Sigma_etaeta,G_obs
   
 }
 
+
+
+
+
+
 Beta_p    <- matrix(0, ncol = M, nrow = M)
 Beta_p[c(1,2,3), 10] <- Beta_p[c(4,5,6), 11] <- Beta_p[c(7,8,9), 12] <- 1
 Beta      <- Beta <- 1*.is_one(Beta_p)
