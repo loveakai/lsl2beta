@@ -1,5 +1,8 @@
 library(dplyr);library(gtools)
 
+source('/Volumes/phaksie/Dropbox/lsl2_beta/lsl_tool.R')
+source('/Volumes/phaksie/Dropbox/lsl2_beta/lsl_functions.R')
+
 model.cfa<-'
 F1=~0.8*x1+0.8*x2+0.8*x3
 F2=~0.8*x4+0.8*x5+0.8*x6
@@ -31,12 +34,10 @@ e_v       <- sapply(dta,mean)[1:n_obs]
 
 
 Beta_p    <- matrix(0, ncol = M, nrow = M)
-Beta_p[c(1,2,3), 10] <- Beta_p[c(4,5,6), 11] <- Beta_p[c(7,8,9), 12] <- 1
+Beta_p[c(1,2,3), 10] <- Beta_p[c(4,5,6), 11] <- Beta_p[c(7,8,9), 12] <- 1  #starting value of Beta
 Beta      <- Beta <- 1*.is_one(Beta_p)
 
 mat       <- matgen(Beta_p = Beta_p,Beta=Beta)
-
-matgen(lambda=lambda)
 
 eta       <- vector(mode = "numeric",M)
 eta       <- c(rep(0.5,9),rep(0.5,3))
@@ -62,14 +63,10 @@ ecm       <- function(mat=mat,ide=ide,G_obs=G_obs){
             
             w_g       <- 1
             alpha_u   <- vector(mode = "numeric",M)
-            #alpha_hat <- vector(mode = "numeric",M)
             JK        <- expand.grid(1:M,1:M)[2:1]
             JLK       <- expand.grid(1:(M-1),1:M)[2:1]
             Beta_u    <- matrix(0, M, M)
-            #beta_hat  <- matrix(0, M, M)
             Phi_u     <- matrix(0, M, M)
-            #Phi_hat   <- matrix(0, M, M)
-            #varphi_hat<- vector(mode = "numeric",M)
             
             ini       <- list(IBinv=IBinv,mu_eta=mu_eta,Sigma_etaeta=Sigma_etaeta,G_obs=G_obs,Sigma=Sigma,e_v=e_v,mat=mat)
  
@@ -89,25 +86,19 @@ ecm       <- function(mat=mat,ide=ide,G_obs=G_obs){
             
             dml_cal(Sigma=Sigma,e_v=e_v,Sigma_vv=subset(ini$Sigma_etaeta,G_obs,G_obs),mu_v=subset(ini$mu_eta,G_obs))
             
-            
-            
-            # stp=FALSE
-            # for (it in 1:1000){
-            #   if (stp == F                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       ALSE){
-            # e_step    <- estep(ini)
-            # cm_step   <- cmstep(w_g=w_g,JK=JK,JLK=JLK,alpha_u=alpha_u,Beta_u=Beta_u,Phi_u=Phi_u,mat=ini$mat,e_step=e_step)
-            # ini$IBinv          <- solve(ide-cm_step$Beta)
-            # ini$mu_eta         <- IBinv%*%cm_step$alpha
-            # ini$Sigma_etaeta   <- IBinv%*%cm_step$Phi%*%t(IBinv)
-            # ini$mat$value$Beta <- cm_step$Beta
-            # ini$mat$value$alpha<- cm_step$alpha
-            # ini$mat$value$Phi  <- cm_step$Phi
-            # print(paste0(it,"..."))} else {
-            # print("done!")
-            # print(cm_step$Beta)
-            # break
-            #   }
-            # }
+          
 }
 
-ls(e_step)
+
+# increment components weights
+w_alpha_u <- sapply(c(1:M), function(j) {1/w_g*phi[j,j]})
+w_beta_u  <- mapply(function(j,k) 1/(w_g*solve(Phi[j,j])*C_etaeta[k,k]), j=JK[,1], k=JK[,2] ,SIMPLIFY = T) %>% matrix(nrow=M,byrow=T)
+diag(w_beta_u)<-0
+w_phi_u   <- matrix(0, M, M)
+w_phiq_u  <- mapply(function(j,lk) 1/((w_g/varphi[j])*C_zetatildazetatilda[[j]][lk,lk]),j=JLK[,1],lk=JLK[,2],SIMPLIFY = "matrix") %>% matrix(nrow=M,byrow=T)
+w_phi_u[upper.tri(w_phi_u)]<-w_phiq_u[upper.tri(w_phiq_u,diag=T)]
+w_phi_u[lower.tri(w_phi_u)]<-w_phiq_u[lower.tri(w_phiq_u)]
+
+# increment components updating
+
+

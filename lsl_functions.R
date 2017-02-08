@@ -4,8 +4,9 @@ betagen   <- function(lambda){
   Beta_p[(1:n_obs),(n_obs+1):M]   <- lambda
   Beta_p[(n_obs+1):M,(n_obs+1):M] <- diag(1,n_lat,n_lat)
   return(Beta_p)
-
+  
 }
+
 matgen    <- function(alpha_p,Beta_p,Phi_p,alpha,Beta,Phi,lambda,scale=T){
   
   #pattern matarices generation
@@ -16,7 +17,7 @@ matgen    <- function(alpha_p,Beta_p,Phi_p,alpha,Beta,Phi,lambda,scale=T){
     if (missing(lambda)) { 
       stop("lambda matrix is not specified")
     } else { 
-      Beta_p                      <- betagen(lambda)
+      Beta_p                        <- betagen(lambda)
     }
   }
   if (missing(Phi_p)) {
@@ -33,6 +34,34 @@ matgen    <- function(alpha_p,Beta_p,Phi_p,alpha,Beta,Phi,lambda,scale=T){
   
   return(list(pattern=list(alpha_p=alpha_p,Beta_p=Beta_p,Phi_p=Phi_p),value=list(alpha=alpha,Beta=Beta,Phi=Phi)))
   
+}
+
+threshold <- function(theta,gamma){
+   sign(theta)*max(abs(theta)-gamma,0) 
+}
+
+varphi    <- function(m,Phi) {diag(Phi)[m]-Phi[m,-m]%*%solve(Phi[-m,-m])%*%Phi[-m,m]}
+
+penalty   <- function(theta,gamma,cw,delta,type){
+  if (type == "l1") {
+    theta <- threshold(theta, gamma * cw)
+  } else if (type == "SCAD") {
+    if (abs(theta) <= gamma * (1 + cw)) {
+      theta <- threshold(theta, cw * gamma)
+    } else if (gamma * (1 + cw) < theta & theta <= gamma * delta) {
+      theta <-
+        thereshold(theta, (cw * gamma * delta) / (delta - 1)) * solve(1 - cw / (delta - 1))
+    } else if (gamma * delta < theta) {
+      theta <- theta
+    }
+  } else if (type == "MCP") {
+    if (theta <= gamma * delta) {
+      theta <- threshold(theta, cw * gamma) * solve(1 - cw / delta)
+    } else if (gamma * delta < theta) {
+      theta <- theta
+    }
+  }
+  return(theta)
 }
 
 estep     <- function(ini){
@@ -74,37 +103,35 @@ cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,alpha_u=alpha_u,Beta_u=Beta_u,Phi_u=
   alpha     <- mat$value$alpha
   phi       <- solve(Phi)
   M         <- length(mat$pattern$alpha_p)
-  varphi    <- sapply(c(1:M), function(m) {diag(Phi)[m]-Phi[m,-m]%*%solve(Phi[-m,-m])%*%Phi[-m,m]})
+  var_phi    <- sapply(c(1:M), varphi, Phi)
   
   # reference componetns weights
   w_alpha   <- sapply(c(1:M), function(j) {1/(w_g*phi[j,j])})
-  w_beta    <- mapply(function(j,k) 1/(w_g*solve(Phi[j,j])*C_etaeta[k,k]), j=JK[,1], k=JK[,2] ,SIMPLIFY = T) %>% matrix(nrow=M,byrow=T)
+  w_beta    <- mapply(function(j,k) 1/(w_g*phi[j,j]*C_etaeta[k,k]), j=JK[,1], k=JK[,2] ,SIMPLIFY = T) %>% matrix(nrow=M,byrow=T)
   diag(w_beta)<-0
   w_phi     <- matrix(0, M, M)
-  w_phiq    <- mapply(function(j,lk) 1/((w_g/varphi[j])*C_zetatildazetatilda[[j]][lk,lk]),j=JLK[,1],lk=JLK[,2],SIMPLIFY = "matrix") %>% matrix(nrow=M,byrow=T)
+  w_phiq    <- mapply(function(j,lk) 1/((w_g/var_phi[j])*C_zetatildazetatilda[[j]][lk,lk]),j=JLK[,1],lk=JLK[,2],SIMPLIFY = "matrix") %>% matrix(nrow=M,byrow=T)
   w_phi[upper.tri(w_phi)]<-w_phiq[upper.tri(w_phiq,diag=T)]
   w_phi[lower.tri(w_phi)]<-w_phiq[lower.tri(w_phiq)]
   
   # increment components weights
   w_alpha_u <- sapply(c(1:M), function(j) {1/w_g*phi[j,j]})
   
-  
   # reference components updating
   
   for (j in which(.is_est(mat$pattern$alpha_p))){
-    alpha[j]   <- w_alpha[j] * ( w_g * phi[j,j] * (e_eta[j] - alpha_u[j] - Beta[j,] %*% e_eta) + 
+    alpha[j]   <- w_alpha[j] * ( w_g * phi[j,j] * (e_eta[j] - alpha_u[j] - Beta[j,] %*% e_eta) +
                                    w_g * phi[j,-j] %*% (e_eta - alpha - alpha_u - Beta %*% e_eta)[-j])
   }
-  
+
   
   for (i in which(.is_est(mat$pattern$Beta_p))){
     k      <- ceiling(i/M)
     j      <- i-(k-1)*M
     Beta[j,k]<- w_beta[j,k] * (w_g * phi[j,j] * (C_etaeta[j,k] - e_eta[k] * alpha[j] - Beta[j,-k] %*% C_etaeta[k,-k] - Beta_u[j,] %*% C_etaeta[,k])+
-                                 w_g *  t(phi[j,-j]) %*% (C_etaeta[-j,k] - e_eta[k] * alpha[-j] - (Beta[-j,] + Beta_u[-j,]) %*% C_etaeta[,k]))
+                                 w_g * phi[j,-j] %*% (C_etaeta[-j,k] - e_eta[k] * alpha[-j] - (Beta[-j,] + Beta_u[-j,]) %*% C_etaeta[,k]))
     
   }
-  
   
   if (all(!.is_est(mat$pattern$Phi_p))) { } else {
     for (i in which(.is_est(mat$pattern$Phi_p))){
@@ -112,29 +139,27 @@ cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,alpha_u=alpha_u,Beta_u=Beta_u,Phi_u=
       j      <- i-(k-1)*M
       if (j==k) {} else {
         if (k<j) (lk<-k) else (lk<-c(k-1))
-        Phi[j,k]<- w_phi[j,k] * (w_g / phi[j,j]) * (C_zetatildazeta[[j]][lk,j] - Phi[j,-c(j,k)] %*% matrix(C_zetatildazetatilda[[j]][-lk,lk],c(M-2),1) - 
+        Phi[j,k]<- w_phi[j,k] * (w_g / var_phi[j]) * (C_zetatildazeta[[j]][lk,j] - Phi[j,-c(j,k)] %*% matrix(C_zetatildazetatilda[[j]][-lk,lk],c(M-2),1) - 
                                                       Phi_u[j,-j] %*% C_zetatildazetatilda[[j]][,lk])
       }
     }
   }
   
+  
   for (j in 1:M){
     Phi[j,j] <- w_g * (C_zetazeta[j,j] - 2 * Phi[j,-j] %*% C_zetatildazeta[[j]][,j] + Phi[j,-j] %*% C_zetatildazetatilda[[j]] %*% Phi[-j,j]) +
       Phi[j,-j] %*% solve(Phi[-j,-j]) %*% Phi[-j,j]
   }
+
   
   
-  return(list(Beta=Beta,alpha=alpha,Phi=Phi))
-}
+  return(list(alpha=alpha,
+              Beta=Beta,
+              Phi=Phi))
+} 
 
 dml_cal   <- function(Sigma=Sigma,e_v=e_v,Sigma_vv=subset(ini$Sigma_etaeta,G_obs,G_obs),mu_v=subset(ini$mu_eta,G_obs)){
   Sigma_vv_iv <- solve(Sigma_vv)
   dml <- -log(det(Sigma_vv_iv %*% Sigma)) + sum(diag(Sigma_vv_iv%*%Sigma)) - dim(Sigma_vv)[1] + t(e_v-mu_v) %*% Sigma_vv_iv %*% (e_v-mu_v)
   return(dml)
-  
-}
-
-
-
-
-
+  }
