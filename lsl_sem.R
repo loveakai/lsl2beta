@@ -1,3 +1,4 @@
+rm(list=ls())
 library(dplyr);library(gtools)
 
 source('/Volumes/phaksie/Dropbox/lsl2_beta/lsl_tool.R')
@@ -31,19 +32,19 @@ n_lat     <- 3
 M         <- n_obs + n_lat
 Sigma     <- cov(dta)
 e_v       <- sapply(dta,mean)[1:n_obs]
+nm<-c(paste0("v",1:n_obs),paste0("f",1:n_lat))
 
-
-Beta_p    <- matrix(0, ncol = M, nrow = M)
+Beta_p    <- matrix(0, ncol = M, nrow = M) %>% `colnames<-`(nm) %>% `rownames<-`(nm)
 Beta_p[c(1,2,3), 10] <- Beta_p[c(4,5,6), 11] <- Beta_p[c(7,8,9), 12] <- 1  #starting value of Beta
 Beta      <- Beta <- 1*.is_one(Beta_p)
 
 mat       <- matgen(Beta_p = Beta_p,Beta=Beta)
 
-eta       <- vector(mode = "numeric",M)
-eta       <- c(rep(0.5,9),rep(0.5,3))
-zeta      <- vector(mode = "numeric",M)
-ide       <- diag(1, ncol = M, nrow = M)
-G_obs     <- c(rep(T,n_obs),rep(F,n_lat))
+eta       <- vector(mode = "numeric",M)   %>%`names<-`(nm)
+#eta       <- c(rep(0.5,9),rep(0.5,3))
+zeta      <- vector(mode = "numeric",M)   %>%`names<-`(nm)
+ide       <- diag(1, ncol = M, nrow = M)  %>% `colnames<-`(nm) %>% `rownames<-`(nm) 
+G_obs     <- c(rep(T,n_obs),rep(F,n_lat)) %>%`names<-`(nm)
 v         <- subset(eta,G_obs)
 
 #ECM
@@ -79,6 +80,7 @@ ecm       <- function(mat=mat,ide=ide,G_obs=G_obs){
               ini$mat$value$Beta <- cm_step$Beta
               ini$mat$value$alpha<- cm_step$alpha
               ini$mat$value$Phi  <- cm_step$Phi
+              print(it)
             }
             
             theta     <- c(cm_step$alpha[.is_est(ini$mat$pattern$alpha_p)],cm_step$Beta[.is_est(ini$mat$pattern$Beta_p)],cm_step$Phi[.is_est(ini$mat$pattern$Phi_p)])
