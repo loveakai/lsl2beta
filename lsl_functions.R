@@ -91,43 +91,35 @@ estep     <- function(ini){
   Beta      <- ini$mat$value$Beta
   Phi       <- ini$mat$value$Phi
   M         <- length(ini$G_obs)
-  C_zetazeta<- C_etaeta - e_eta%*%alpha -  C_etaeta %*% t(Beta) - alpha %*% t(e_eta) +
-    alpha %*% t(alpha) + alpha %*% t(e_eta) %*% t(Beta) - Beta %*% t(C_etaeta) + 
-    Beta %*% e_eta %*% t(alpha) + Beta %*% C_etaeta %*% t(Beta)
   
   return(list(e_eta=e_eta,
-              C_etaeta=C_etaeta,
-              C_zetazeta=C_zetazeta))
+              C_etaeta=C_etaeta))
 }
 
 cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,alpha_u=alpha_u,Beta_u=Beta_u,Phi_u=Phi_u,mat=ini$mat,e_step=e_step){
   
-  e_eta     <-e_step$e_eta
-  C_etaeta  <-e_step$C_etaeta
-  C_zetazeta<-e_step$C_zetazeta
+  e_eta     <- e_step$e_eta
+  C_etaeta  <- e_step$C_etaeta
   Phi       <- mat$value$Phi
   Beta      <- mat$value$Beta
   alpha     <- mat$value$alpha
-  phi       <- solve(Phi)
+  phi       <- solve(Phi) # for alpha and Beta
   M         <- length(mat$pattern$alpha_p)
+
+  ## reference components updating
+
+  # alpha
   
-  # reference componetns weights
   w_alpha   <- sapply(c(1:M), function(j) {1/(w_g*phi[j,j])})
-  w_beta    <- mapply(function(j,k) 1/(w_g*phi[j,j]*C_etaeta[k,k]), j=JK[,1], k=JK[,2] ,SIMPLIFY = T) %>% matrix(nrow=M,byrow=T)
-  diag(w_beta)<-0
-  
-  
-  # increment components weights
-  w_alpha_u <- sapply(c(1:M), function(j) {1/w_g*phi[j,j]})
-  
-  # reference components updating
-  
   for (j in which(.is_est(mat$pattern$alpha_p))){
     alpha[j]   <- w_alpha[j] * ( w_g * phi[j,j] * (e_eta[j] - alpha_u[j] - Beta[j,] %*% e_eta) +
                                    w_g * phi[j,-j] %*% (e_eta - alpha - alpha_u - Beta %*% e_eta)[-j])
   }
 
+  # Beta
   
+  w_beta    <- mapply(function(j,k) 1/(w_g*phi[j,j]*C_etaeta[k,k]), j=JK[,1], k=JK[,2] ,SIMPLIFY = T) %>% matrix(nrow=M,byrow=T)
+  diag(w_beta)<-0
   for (i in which(.is_est(mat$pattern$Beta_p))){
     k      <- ceiling(i/M)
     j      <- i-(k-1)*M
@@ -136,32 +128,40 @@ cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,alpha_u=alpha_u,Beta_u=Beta_u,Phi_u=
     
   }
   
-  #if (all(!.is_est(mat$pattern$Phi_p))) { } else {
-    for (i in which(.is_est(mat$pattern$Phi_p))){
-      k      <- ceiling(i/M)
-      j      <- i-(k-1)*M
-      if (j==k) {} else {
-        C_zetatildazeta<- lapply(c(1:M), function(j) {solve(Phi[-j,-j])%*%C_zetazeta[-j,]})
-        C_zetatildazetatilda<- lapply(c(1:M), function(j) {solve(Phi[-j,-j])%*%C_zetazeta[-j,-j]%*%solve(Phi[-j,-j])})
-        var_phi   <- sapply(c(1:M), varphi, Phi)
-        w_phi     <- matrix(0, M, M)
-        w_phiq    <- mapply(function(j,lk) 1/((w_g/var_phi[j])*C_zetatildazetatilda[[j]][lk,lk]),j=JLK[,1],lk=JLK[,2],SIMPLIFY = "matrix") %>% matrix(nrow=M,byrow=T)
-        w_phi[upper.tri(w_phi)]<-w_phiq[upper.tri(w_phiq,diag=T)]
-        w_phi[lower.tri(w_phi)]<-w_phiq[lower.tri(w_phiq)]
-        if (k<j) (lk<-k) else (lk<-c(k-1))
-        Phi[j,k]<- w_phi[j,k] * (w_g / var_phi[j]) * (C_zetatildazeta[[j]][lk,j] - Phi[j,-c(j,k)] %*% matrix(C_zetatildazetatilda[[j]][-lk,lk],c(M-2),1) - 
-                                                      Phi_u[j,-j] %*% C_zetatildazetatilda[[j]][,lk])
-      }
+  # Phi
+  
+  C_zetazeta<- C_etaeta - e_eta%*%alpha -  C_etaeta %*% t(Beta) - alpha %*% t(e_eta) +
+    alpha %*% t(alpha) + alpha %*% t(e_eta) %*% t(Beta) - Beta %*% t(C_etaeta) + 
+    Beta %*% e_eta %*% t(alpha) + Beta %*% C_etaeta %*% t(Beta)
+  
+  for (i in which(.is_est(mat$pattern$Phi_p))){
+    k      <- ceiling(i/M)
+    j      <- i-(k-1)*M
+    if (j<=k) {} else {
+      lk<-k
+      
+      C_zetatildazeta     <- solve(Phi[-j,-j])%*%C_zetazeta[-j,]
+      C_zetatildazetatilda<- solve(Phi[-j,-j])%*%C_zetazeta[-j,-j]%*%solve(Phi[-j,-j])
+      var_phi   <- sapply(c(1:M), varphi, Phi)
+      w_phi     <- 1/((w_g/var_phi[j])*C_zetatildazetatilda[lk,lk])
+      
+      Phi[j,k]<- w_phi * (w_g / var_phi[j]) * (C_zetatildazeta[lk,j] - Phi[j,-c(j,k)] %*% matrix(C_zetatildazetatilda[-lk,lk],c(M-2),1) - 
+                                                 Phi_u[j,-j] %*% C_zetatildazetatilda[,lk])
     }
-  #}
+  }
+  Phi[upper.tri(Phi)]<-t(Phi)[upper.tri(Phi)]
+
 
   for (j in 1:M){
-    C_zetatildazeta<- lapply(c(1:M), function(j) {solve(Phi[-j,-j])%*%C_zetazeta[-j,]})
-    C_zetatildazetatilda<- lapply(c(1:M), function(j) {solve(Phi[-j,-j])%*%C_zetazeta[-j,-j]%*%solve(Phi[-j,-j])})
-    Phi[j,j] <- w_g * (C_zetazeta[j,j] - 2 * Phi[j,-j] %*% C_zetatildazeta[[j]][,j] + Phi[j,-j] %*% C_zetatildazetatilda[[j]] %*% Phi[-j,j]) +
+    C_zetatildazeta<- solve(Phi[-j,-j])%*%C_zetazeta[-j,]
+    C_zetatildazetatilda<- solve(Phi[-j,-j])%*%C_zetazeta[-j,-j]%*%solve(Phi[-j,-j])
+    Phi[j,j] <- w_g * (C_zetazeta[j,j] - 2 * Phi[j,-j] %*% C_zetatildazeta[,j] + Phi[j,-j] %*% C_zetatildazetatilda %*% Phi[-j,j]) +
       Phi[j,-j] %*% solve(Phi[-j,-j]) %*% Phi[-j,j]
   }
 
+  ## increment components weights
+  w_alpha_u <- sapply(c(1:M), function(j) {1/w_g*phi[j,j]})
+  
   
   
   return(list(alpha=alpha,

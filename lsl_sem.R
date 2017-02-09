@@ -25,8 +25,7 @@ F1~~0.4*F3
 F2~~0.4*F3
 '
 
-#dta<-lavaan::HolzingerSwineford1939[,-c(1:6)]
-dta       <- lavaan::simulateData(model.cfa,sample.nobs = 1000L)
+dta       <- lavaan::simulateData(model.cfa,sample.nobs = 10000L)
 n_obs     <- ncol(dta)
 n_lat     <- 3
 M         <- n_obs + n_lat
@@ -36,12 +35,11 @@ nm<-c(paste0("v",1:n_obs),paste0("f",1:n_lat))
 
 Beta_p    <- matrix(0, ncol = M, nrow = M) %>% `colnames<-`(nm) %>% `rownames<-`(nm)
 Beta_p[c(1,2,3), 10] <- Beta_p[c(4,5,6), 11] <- Beta_p[c(7,8,9), 12] <- 1  #starting value of Beta
-Beta      <- Beta <- 1*.is_one(Beta_p)
+Beta      <- Beta <- 0.8*.is_one(Beta_p)
 
-mat       <- matgen(Beta_p = Beta_p,Beta=Beta)
+mat       <- matgen(Beta_p = Beta_p,Beta=Beta,scale=T)
 
 eta       <- vector(mode = "numeric",M)   %>%`names<-`(nm)
-#eta       <- c(rep(0.5,9),rep(0.5,3))
 zeta      <- vector(mode = "numeric",M)   %>%`names<-`(nm)
 ide       <- diag(1, ncol = M, nrow = M)  %>% `colnames<-`(nm) %>% `rownames<-`(nm) 
 G_obs     <- c(rep(T,n_obs),rep(F,n_lat)) %>%`names<-`(nm)
@@ -71,7 +69,7 @@ ecm       <- function(mat=mat,ide=ide,G_obs=G_obs){
             
             ini       <- list(IBinv=IBinv,mu_eta=mu_eta,Sigma_etaeta=Sigma_etaeta,G_obs=G_obs,Sigma=Sigma,e_v=e_v,mat=mat)
  
-            for (it in 1:100){
+            for (it in 1:1000){
               e_step    <- estep(ini)
               cm_step   <- cmstep(w_g=w_g,JK=JK,JLK=JLK,alpha_u=alpha_u,Beta_u=Beta_u,Phi_u=Phi_u,mat=ini$mat,e_step=e_step)
               ini$IBinv          <- solve(ide-cm_step$Beta)
