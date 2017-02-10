@@ -2,7 +2,7 @@ betagen   <- function(lambda){
   
   Beta_p                          <- matrix(0, ncol = M, nrow = M)
   Beta_p[(1:n_obs),(n_obs+1):M]   <- lambda
-  Beta_p[(n_obs+1):M,(n_obs+1):M] <- diag(1,n_lat,n_lat)
+  #Beta_p[(n_obs+1):M,(n_obs+1):M] <- diag(1,n_lat,n_lat)
   return(Beta_p)
   
 }
@@ -32,7 +32,7 @@ matgen    <- function(alpha_p,Beta_p,Phi_p,alpha,Beta,Phi,lambda,scale=T){
   if (missing(alpha)) {
     alpha <- c(sapply(dta,mean)[1:n_obs],rep(0,n_lat)) %>% `names<-`(nm)}
   if (missing(Beta))  {
-    Beta  <- 0.1*.is_one(Beta_p)
+    Beta  <- 0.8 *.is_est(Beta_p)
     colnames(Beta)  <- nm
     rownames(Beta)  <- nm
     }
@@ -48,27 +48,26 @@ matgen    <- function(alpha_p,Beta_p,Phi_p,alpha,Beta,Phi,lambda,scale=T){
   
 }
 
-threshold <- function(theta,gamma){
-   sign(theta)*max(abs(theta)-gamma,0) 
+threshold <- function(theta,gma){
+   sign(theta)*max(abs(theta)-gma,0) 
 }
 
 varphi    <- function(m,Phi) {diag(Phi)[m]-Phi[m,-m]%*%solve(Phi[-m,-m])%*%Phi[-m,m]}
 
-penalty   <- function(theta,gamma,cw,delta,type){
+penalty   <- function(theta,gamma,cth,w,delta,type){
   if (type == "l1") {
-    theta <- threshold(theta, gamma * cw)
+    theta <- threshold(theta, gamma * cth * w)
   } else if (type == "SCAD") {
-    if (abs(theta) <= gamma * (1 + cw)) {
-      theta <- threshold(theta, cw * gamma)
-    } else if (gamma * (1 + cw) < theta & theta <= gamma * delta) {
-      theta <-
-        thereshold(theta, (cw * gamma * delta) / (delta - 1)) * solve(1 - cw / (delta - 1))
+    if (abs(theta) <= gamma * (1 + cth * w)) {
+      theta <- threshold(theta, cth * w * gamma)
+    } else if (gamma * (1 + cth * w) < theta & theta <= gamma * delta) {
+      theta <- thereshold(theta, (cth * w * gamma * delta) / (delta - 1)) * solve(1 - cw / (delta - 1))
     } else if (gamma * delta < theta) {
       theta <- theta
     }
   } else if (type == "MCP") {
     if (theta <= gamma * delta) {
-      theta <- threshold(theta, cw * gamma) * solve(1 - cw / delta)
+      theta <- threshold(theta, cth * w * gamma) * solve(1 - cth * w / delta)
     } else if (gamma * delta < theta) {
       theta <- theta
     }
@@ -87,16 +86,12 @@ estep     <- function(ini){
   e_eta     <- J+K%*%ini$e_v
   C_etaeta  <- ini$Sigma_etaeta - Sigma_etav %*% solve(Sigma_vv) %*% Sigma_veta +
     J %*% t(J) + J %*% t(ini$e_v) %*% t(K) + K %*% ini$e_v %*% t(J) + K %*% C_vv %*% t(K)
-  alpha     <- ini$mat$value$alpha
-  Beta      <- ini$mat$value$Beta
-  Phi       <- ini$mat$value$Phi
-  M         <- length(ini$G_obs)
   
-  return(list(e_eta=e_eta,
-              C_etaeta=C_etaeta))
+  return(list(e_eta=e_eta, C_etaeta=C_etaeta))
 }
 
-cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,alpha_u=alpha_u,Beta_u=Beta_u,Phi_u=Phi_u,mat=ini$mat,e_step=e_step){
+cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,alpha_u=alpha_u,Beta_u=Beta_u,Phi_u=Phi_u,mat=ini$mat,e_step=e_step,type=type){
+  if (missing(type)) {type<-"l1"}
   
   e_eta     <- e_step$e_eta
   C_etaeta  <- e_step$C_etaeta
@@ -118,14 +113,19 @@ cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,alpha_u=alpha_u,Beta_u=Beta_u,Phi_u=
 
   # Beta
   
-  w_beta    <- mapply(function(j,k) 1/(w_g*phi[j,j]*C_etaeta[k,k]), j=JK[,1], k=JK[,2] ,SIMPLIFY = T) %>% matrix(nrow=M,byrow=T)
-  diag(w_beta)<-0
+  #w_beta    <- mapply(function(j,k) 1/(w_g*phi[j,j]*C_etaeta[k,k]), j=JK[,1], k=JK[,2] ,SIMPLIFY = T) %>% matrix(nrow=M,byrow=T)
+  #diag(w_beta)<-0
+  ww<-matrix(0,M,M)
   for (i in which(.is_est(mat$pattern$Beta_p))){
     k      <- ceiling(i/M)
     j      <- i-(k-1)*M
-    Beta[j,k]<- w_beta[j,k] * (w_g * phi[j,j] * (C_etaeta[j,k] - e_eta[k] * alpha[j] - Beta[j,-k] %*% C_etaeta[k,-k] - Beta_u[j,] %*% C_etaeta[,k])+
+    w_beta <-  1/(w_g*phi[j,j]*C_etaeta[k,k])
+    bet    <- w_beta * (w_g * phi[j,j] * (C_etaeta[j,k] - e_eta[k] * alpha[j] - Beta[j,-k] %*% C_etaeta[-k,k] - Beta_u[j,] %*% C_etaeta[,k])+
                                  w_g * phi[j,-j] %*% (C_etaeta[-j,k] - e_eta[k] * alpha[-j] - (Beta[-j,] + Beta_u[-j,]) %*% C_etaeta[,k]))
     
+    cth<-is.na(mat$pattern$Beta_p[i])
+    Beta[j,k]<-penalty(theta=bet,gamma=0.1,cth=cth,w=w_beta,delta=10,type=type)
+    ww[j,k]<-w_beta
   }
   
   # Phi
@@ -145,7 +145,7 @@ cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,alpha_u=alpha_u,Beta_u=Beta_u,Phi_u=
       var_phi   <- sapply(c(1:M), varphi, Phi)
       w_phi     <- 1/((w_g/var_phi[j])*C_zetatildazetatilda[lk,lk])
       
-      Phi[j,k]<- w_phi * (w_g / var_phi[j]) * (C_zetatildazeta[lk,j] - Phi[j,-c(j,k)] %*% matrix(C_zetatildazetatilda[-lk,lk],c(M-2),1) - 
+      Phi[j,k]<- w_phi * (w_g / var_phi[j]) * (C_zetatildazeta[lk,j] - Phi[j,-c(j,k)] %*% matrix(C_zetatildazetatilda[-lk,lk]) - 
                                                  Phi_u[j,-j] %*% C_zetatildazetatilda[,lk])
     }
   }
