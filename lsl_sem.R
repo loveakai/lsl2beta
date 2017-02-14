@@ -26,9 +26,9 @@ F1~~0.4*F3
 F2~~0.4*F3
 '
 
-dta       <- lavaan::simulateData(model.cfa,sample.nobs = 10000L)
+#dta       <- lavaan::simulateData(model.cfa,sample.nobs = 10000L)
 
-#dta       <- lavaan::HolzingerSwineford1939[7:15]
+dta       <- lavaan::HolzingerSwineford1939[7:15]
 n_obs     <- ncol(dta)
 n_lat     <- 3
 M         <- n_obs + n_lat
@@ -36,7 +36,7 @@ Sigma     <- cov(dta)
 e_v       <- sapply(dta,mean)[1:n_obs]
 nm<-c(paste0("v",1:n_obs),paste0("f",1:n_lat))
 
-lambda <- matrix(NA, 9, 3)
+lambda <- matrix(0, 9, 3)
 lambda[c(1,2,3), 1] <- lambda[c(4,5,6), 2] <- lambda[c(7,8,9), 3] <- 1
 
 # Beta_p    <- matrix(0, ncol = M, nrow = M) %>% `colnames<-`(nm) %>% `rownames<-`(nm)
@@ -86,9 +86,9 @@ v         <- subset(eta,G_obs)
             
             ini       <- list(IBinv=IBinv,mu_eta=mu_eta,Sigma_etaeta=Sigma_etaeta,G_obs=G_obs,Sigma=Sigma,e_v=e_v,mat=mat)
  
-            for (it in 1:100){
+            for (it in 1:10){
               e_step    <- estep(ini)
-              cm_step   <- cmstep(w_g=w_g,JK=JK,JLK=JLK,alpha_u=alpha_u,Beta_u=Beta_u,Phi_u=Phi_u,mat=ini$mat,e_step=e_step,type="l1")
+              cm_step   <- cmstep(w_g=w_g,JK=JK,JLK=JLK,alpha_u=alpha_u,Beta_u=Beta_u,Phi_u=Phi_u,mat=ini$mat,e_step=e_step,type="SCAD")
               ini$IBinv          <- solve(ide-cm_step$Beta)
               ini$mu_eta         <- ini$IBinv%*%cm_step$alpha
               ini$Sigma_etaeta   <- ini$IBinv%*%cm_step$Phi%*%t(ini$IBinv)

@@ -32,7 +32,7 @@ matgen    <- function(alpha_p,Beta_p,Phi_p,alpha,Beta,Phi,lambda,scale=T){
   if (missing(alpha)) {
     alpha <- c(sapply(dta,mean)[1:n_obs],rep(0,n_lat)) %>% `names<-`(nm)}
   if (missing(Beta))  {
-    Beta  <- 0.8 *.is_est(Beta_p)
+    Beta  <- 1 *.is_est(Beta_p)
     colnames(Beta)  <- nm
     rownames(Beta)  <- nm
     }
@@ -60,17 +60,13 @@ penalty   <- function(theta,gamma,cth,w,delta,type){
   } else if (type == "SCAD") {
     if (abs(theta) <= gamma * (1 + cth * w)) {
       theta <- threshold(theta, cth * w * gamma)
-    } else if (gamma * (1 + cth * w) < theta & theta <= gamma * delta) {
-      theta <- thereshold(theta, (cth * w * gamma * delta) / (delta - 1)) * solve(1 - cw / (delta - 1))
-    } else if (gamma * delta < theta) {
-      theta <- theta
-    }
+    } else if (gamma * (1 + cth * w) < abs(theta) & abs(theta) <= gamma * delta) {
+      theta <- threshold(theta, (cth * w * gamma * delta) / (delta - 1)) / (1 - ((cth * w) / (delta - 1)))
+    } else { }
   } else if (type == "MCP") {
-    if (theta <= gamma * delta) {
-      theta <- threshold(theta, cth * w * gamma) * solve(1 - cth * w / delta)
-    } else if (gamma * delta < theta) {
-      theta <- theta
-    }
+    if (abs(theta) <= gamma * delta) {
+      theta <- threshold(theta, cth * w * gamma) / (1 - ((cth * w) / delta))
+    } else { }
   }
   return(theta)
 }
@@ -113,8 +109,6 @@ cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,alpha_u=alpha_u,Beta_u=Beta_u,Phi_u=
 
   # Beta
   
-  #w_beta    <- mapply(function(j,k) 1/(w_g*phi[j,j]*C_etaeta[k,k]), j=JK[,1], k=JK[,2] ,SIMPLIFY = T) %>% matrix(nrow=M,byrow=T)
-  #diag(w_beta)<-0
   ww<-matrix(0,M,M)
   for (i in which(.is_est(mat$pattern$Beta_p))){
     k      <- ceiling(i/M)
