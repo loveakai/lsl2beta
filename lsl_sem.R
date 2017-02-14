@@ -50,8 +50,6 @@ lambda[c(1,2,3), 1] <- lambda[c(4,5,6), 2] <- lambda[c(7,8,9), 3] <- 1
 # diag(Phi) <- 1-0.8^2
 # Phi[10,10]<-Phi[11,11]<-Phi[12,12]<-1
 
-
-
 mat       <- matgen(lambda=lambda,scale=T)
 
 #mat       <- matgen(lambda=lambda)
@@ -95,7 +93,7 @@ v         <- subset(eta,G_obs)
               ini$mat$value$Beta <- cm_step$Beta
               ini$mat$value$alpha<- cm_step$alpha
               ini$mat$value$Phi  <- cm_step$Phi
-
+              
             }
             
             theta     <- c(cm_step$alpha[.is_est(ini$mat$pattern$alpha_p)],cm_step$Beta[.is_est(ini$mat$pattern$Beta_p)],cm_step$Phi[.is_est(ini$mat$pattern$Phi_p)])
