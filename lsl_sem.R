@@ -32,7 +32,7 @@ dta       <- lavaan::HolzingerSwineford1939[7:15]
 n_obs     <- ncol(dta)
 n_lat     <- 3
 M         <- n_obs + n_lat
-Sigma     <- cov(dta)
+Sigma     <- t(dta) %>% as.data.frame %>% lapply(tcrossprod) %>% simplify2array %>% apply(1:2,mean)
 e_v       <- sapply(dta,mean)[1:n_obs]
 nm<-c(paste0("v",1:n_obs),paste0("f",1:n_lat))
 
@@ -82,11 +82,11 @@ v         <- subset(eta,G_obs)
             Beta_u    <- matrix(0, M, M)
             Phi_u     <- matrix(0, M, M)
             
-            ini       <- list(IBinv=IBinv,mu_eta=mu_eta,Sigma_etaeta=Sigma_etaeta,G_obs=G_obs,Sigma=Sigma,e_v=e_v,mat=mat)
+            ini       <- list(IBinv=IBinv,mu_eta=mu_eta,Sigma_etaeta=Sigma_etaeta,Sigma=Sigma,G_obs=G_obs,e_v=e_v,mat=mat)
  
-            for (it in 1:10){
+            for (it in 1:500){
               e_step    <- estep(ini)
-              cm_step   <- cmstep(w_g=w_g,JK=JK,JLK=JLK,alpha_u=alpha_u,Beta_u=Beta_u,Phi_u=Phi_u,mat=ini$mat,e_step=e_step,type="SCAD")
+              cm_step   <- cmstep(w_g=w_g,JK=JK,JLK=JLK,alpha_u=alpha_u,Beta_u=Beta_u,Phi_u=Phi_u,mat=ini$mat,e_step=e_step,type="l1")
               ini$IBinv          <- solve(ide-cm_step$Beta)
               ini$mu_eta         <- ini$IBinv%*%cm_step$alpha
               ini$Sigma_etaeta   <- ini$IBinv%*%cm_step$Phi%*%t(ini$IBinv)
