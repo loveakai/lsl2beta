@@ -28,7 +28,6 @@ F2~~0.4*F3
 
 dta       <- lavaan::simulateData(model.cfa,sample.nobs = 10000L) #%>% cbind(.,sample(c(1,2),size=nrow(.),rep=T))
 
-
 #dta       <- lavaan::HolzingerSwineford1939[7:15]
 
 n_gps     <- 2
