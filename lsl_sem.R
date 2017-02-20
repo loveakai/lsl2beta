@@ -82,7 +82,7 @@ v         <- subset(eta,G_obs)
             JK        <- expand.grid(1:M,1:M)[2:1]
             JLK       <- expand.grid(1:(M-1),1:M)[2:1]
             Beta_g    <- rep(list(matrix(0, M, M)),n_gps)
-            Phi_g     <- rep(list(matrix(0, M, M)),n_gps)
+            Phi_g     <- matrix(0, M, M) %>% `diag<-`(0.1) %>%  list() %>%  rep(n_gps)
             
             ini       <- list(IBinv=IBinv,mu_eta=mu_eta,Sigma_etaeta=Sigma_etaeta,Sigma=Sigma,G_obs=G_obs,e_v=e_v,mat=mat)
  
