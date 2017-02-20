@@ -30,7 +30,7 @@ dta       <- lavaan::simulateData(model.cfa,sample.nobs = 10000L) #%>% cbind(.,s
 
 #dta       <- lavaan::HolzingerSwineford1939[7:15]
 
-n_gps     <- 2
+n_gps     <- 1
 n_obs     <- ncol(dta)
 n_lat     <- 3
 M         <- n_obs + n_lat
@@ -77,12 +77,12 @@ v         <- subset(eta,G_obs)
             mu_eta    <- IBinv%*%alpha
             Sigma_etaeta<-IBinv%*%Phi%*%t(IBinv)
             
-            w_g       <- 1
-            alpha_g   <- vector(mode = "numeric",M)
+            w_g       <- rep(list(1),n_gps)
+            alpha_g   <- rep(list(rep(0,M)),n_gps)
             JK        <- expand.grid(1:M,1:M)[2:1]
             JLK       <- expand.grid(1:(M-1),1:M)[2:1]
-            Beta_g    <- matrix(0, M, M)
-            Phi_g     <- matrix(0, M, M)
+            Beta_g    <- rep(list(matrix(0, M, M)),n_gps)
+            Phi_g     <- rep(list(matrix(0, M, M)),n_gps)
             
             ini       <- list(IBinv=IBinv,mu_eta=mu_eta,Sigma_etaeta=Sigma_etaeta,Sigma=Sigma,G_obs=G_obs,e_v=e_v,mat=mat)
  
