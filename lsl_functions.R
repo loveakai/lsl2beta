@@ -2,7 +2,7 @@ betagen   <- function(lambda){
   
   Beta_p                          <- matrix(0, ncol = M, nrow = M)
   Beta_p[(1:n_obs),(n_obs+1):M]   <- lambda
-  Beta_p[(n_obs+1):M,(n_obs+1):M] <- diag(1,n_lat,n_lat)
+  #Beta_p[(n_obs+1):M,(n_obs+1):M] <- diag(1,n_lat,n_lat)
   return(Beta_p)
   
 }
@@ -32,7 +32,7 @@ matgen    <- function(alpha_p,Beta_p,Phi_p,alpha,Beta,Phi,lambda,scale=T){
   if (missing(alpha)) {
     alpha <- c(sapply(dta,mean)[1:n_obs],rep(0,n_lat)) %>% `names<-`(nm)}
   if (missing(Beta))  {
-    Beta  <- 0.1*.is_one(Beta_p)
+    Beta  <- 1 *.is_est(Beta_p)
     colnames(Beta)  <- nm
     rownames(Beta)  <- nm
     }
@@ -48,30 +48,25 @@ matgen    <- function(alpha_p,Beta_p,Phi_p,alpha,Beta,Phi,lambda,scale=T){
   
 }
 
-threshold <- function(theta,gamma){
-   sign(theta)*max(abs(theta)-gamma,0) 
+threshold <- function(theta,gma){
+   sign(theta)*max(abs(theta)-gma,0) 
 }
 
 varphi    <- function(m,Phi) {diag(Phi)[m]-Phi[m,-m]%*%solve(Phi[-m,-m])%*%Phi[-m,m]}
 
-penalty   <- function(theta,gamma,cw,delta,type){
+penalty   <- function(theta,gamma,cth,w,delta,type){
   if (type == "l1") {
-    theta <- threshold(theta, gamma * cw)
+    theta <- threshold(theta, gamma * cth * w)
   } else if (type == "SCAD") {
-    if (abs(theta) <= gamma * (1 + cw)) {
-      theta <- threshold(theta, cw * gamma)
-    } else if (gamma * (1 + cw) < theta & theta <= gamma * delta) {
-      theta <-
-        thereshold(theta, (cw * gamma * delta) / (delta - 1)) * solve(1 - cw / (delta - 1))
-    } else if (gamma * delta < theta) {
-      theta <- theta
-    }
+    if (abs(theta) <= gamma * (1 + cth * w)) {
+      theta <- threshold(theta, cth * w * gamma)
+    } else if (gamma * (1 + cth * w) < abs(theta) & abs(theta) <= gamma * delta) {
+      theta <- threshold(theta, (cth * w * gamma * delta) / (delta - 1)) / (1 - ((cth * w) / (delta - 1)))
+    } else { }
   } else if (type == "MCP") {
-    if (theta <= gamma * delta) {
-      theta <- threshold(theta, cw * gamma) * solve(1 - cw / delta)
-    } else if (gamma * delta < theta) {
-      theta <- theta
-    }
+    if (abs(theta) <= gamma * delta) {
+      theta <- threshold(theta, cth * w * gamma) / (1 - ((cth * w) / delta))
+    } else { }
   }
   return(theta)
 }
@@ -87,48 +82,51 @@ estep     <- function(ini){
   e_eta     <- J+K%*%ini$e_v
   C_etaeta  <- ini$Sigma_etaeta - Sigma_etav %*% solve(Sigma_vv) %*% Sigma_veta +
     J %*% t(J) + J %*% t(ini$e_v) %*% t(K) + K %*% ini$e_v %*% t(J) + K %*% C_vv %*% t(K)
-  alpha     <- ini$mat$value$alpha
-  Beta      <- ini$mat$value$Beta
-  Phi       <- ini$mat$value$Phi
-  M         <- length(ini$G_obs)
   
-  return(list(e_eta=e_eta,
-              C_etaeta=C_etaeta))
+  return(list(e_eta=e_eta, C_etaeta=C_etaeta))
 }
 
-cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,alpha_u=alpha_u,Beta_u=Beta_u,Phi_u=Phi_u,mat=ini$mat,e_step=e_step){
+cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,alpha_g=alpha_g,Beta_g=Beta_g,Phi_g=Phi_g,mat=ini$mat,e_step=e_step,type=type){
+  if (missing(type)) {type<-"l1"}
   
   e_eta     <- e_step$e_eta
   C_etaeta  <- e_step$C_etaeta
-  Phi       <- mat$value$Phi
-  Beta      <- mat$value$Beta
-  alpha     <- mat$value$alpha
-  phi       <- solve(Phi) # for alpha and Beta
+  Phi_u       <- mat$value$Phi
+  Beta_u      <- mat$value$Beta
+  alpha_u     <- mat$value$alpha
+  phi       <- solve(Phi_u) # for alpha and Beta
   M         <- length(mat$pattern$alpha_p)
 
   ## reference components updating
 
   # alpha
   
-  w_alpha   <- sapply(c(1:M), function(j) {1/(w_g*phi[j,j])})
+  w_alpha_u   <- sapply(c(1:M), function(j) {1/(w_g*phi[j,j])})
   for (j in which(.is_est(mat$pattern$alpha_p))){
-    alpha[j]   <- w_alpha[j] * ( w_g * phi[j,j] * (e_eta[j] - alpha_u[j] - Beta[j,] %*% e_eta) +
-                                   w_g * phi[j,-j] %*% (e_eta - alpha - alpha_u - Beta %*% e_eta)[-j])
+    alpha_u[j]   <- w_alpha_u[j] * ( w_g * phi[j,j] * (e_eta[j] - alpha_g[j] - Beta[j,] %*% e_eta) +
+                                   w_g * phi[j,-j] %*% (e_eta - (alpha_u + alpha_g) - Beta %*% e_eta)[-j])
   }
 
   # Beta
   
-  w_beta    <- mapply(function(j,k) 1/(w_g*phi[j,j]*C_etaeta[k,k]), j=JK[,1], k=JK[,2] ,SIMPLIFY = T) %>% matrix(nrow=M,byrow=T)
-  diag(w_beta)<-0
+  #ww<-matrix(0,M,M)
   for (i in which(.is_est(mat$pattern$Beta_p))){
     k      <- ceiling(i/M)
     j      <- i-(k-1)*M
-    Beta[j,k]<- w_beta[j,k] * (w_g * phi[j,j] * (C_etaeta[j,k] - e_eta[k] * alpha[j] - Beta[j,-k] %*% C_etaeta[k,-k] - Beta_u[j,] %*% C_etaeta[,k])+
-                                 w_g * phi[j,-j] %*% (C_etaeta[-j,k] - e_eta[k] * alpha[-j] - (Beta[-j,] + Beta_u[-j,]) %*% C_etaeta[,k]))
+    w_beta_u <-  1/(w_g*phi[j,j]*C_etaeta[k,k])
+    bet_u    <- w_beta_u * (w_g * phi[j,j] * (C_etaeta[j,k] - e_eta[k] * alpha[j] - Beta_u[j,-k] %*% C_etaeta[-k,k] - Beta_g[j,] %*% C_etaeta[,k])+
+                                 w_g * phi[j,-j] %*% (C_etaeta[-j,k] - e_eta[k] * alpha[-j] - (Beta_u[-j,] + Beta_g[-j,]) %*% C_etaeta[,k]))
     
+    cth<-is.na(mat$pattern$Beta_p[i])
+    Beta_u[j,k]<-penalty(theta=bet_u,gamma=0.075,cth=cth,w=w_beta_u,delta=2.5,type=type)
+    #ww[j,k]<-w_beta
   }
   
   # Phi
+  
+  alpha<- alpha_u
+  Beta <- Beta_u
+  Phi  <- Phi_u
   
   C_zetazeta<- C_etaeta - e_eta%*%alpha -  C_etaeta %*% t(Beta) - alpha %*% t(e_eta) +
     alpha %*% t(alpha) + alpha %*% t(e_eta) %*% t(Beta) - Beta %*% t(C_etaeta) + 
@@ -140,33 +138,37 @@ cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,alpha_u=alpha_u,Beta_u=Beta_u,Phi_u=
     if (j<=k) {} else {
       lk<-k
       
-      C_zetatildazeta     <- solve(Phi[-j,-j])%*%C_zetazeta[-j,]
-      C_zetatildazetatilda<- solve(Phi[-j,-j])%*%C_zetazeta[-j,-j]%*%solve(Phi[-j,-j])
-      var_phi   <- sapply(c(1:M), varphi, Phi)
-      w_phi     <- 1/((w_g/var_phi[j])*C_zetatildazetatilda[lk,lk])
+      C_zetatildazeta     <- solve(Phi_u[-j,-j])%*%C_zetazeta[-j,]
+      C_zetatildazetatilda<- solve(Phi_u[-j,-j])%*%C_zetazeta[-j,-j]%*%solve(Phi_u[-j,-j])
+      var_phi   <- sapply(c(1:M), varphi, Phi_u)
+      w_phi_u     <- 1/((w_g/var_phi[j])*C_zetatildazetatilda[lk,lk])
       
-      Phi[j,k]<- w_phi * (w_g / var_phi[j]) * (C_zetatildazeta[lk,j] - Phi[j,-c(j,k)] %*% matrix(C_zetatildazetatilda[-lk,lk],c(M-2),1) - 
-                                                 Phi_u[j,-j] %*% C_zetatildazetatilda[,lk])
+      Phi_u[j,k]<- w_phi_u * (w_g / var_phi[j]) * (C_zetatildazeta[lk,j] - Phi_u[j,-c(j,k)] %*% matrix(C_zetatildazetatilda[-lk,lk]) - 
+                                                 Phi_g[j,-j] %*% C_zetatildazetatilda[,lk])
     }
   }
-  Phi[upper.tri(Phi)]<-t(Phi)[upper.tri(Phi)]
+  Phi_u[upper.tri(Phi_u)]<-t(Phi_u)[upper.tri(Phi_u)]
 
 
   for (j in 1:M){
-    C_zetatildazeta<- solve(Phi[-j,-j])%*%C_zetazeta[-j,]
-    C_zetatildazetatilda<- solve(Phi[-j,-j])%*%C_zetazeta[-j,-j]%*%solve(Phi[-j,-j])
-    Phi[j,j] <- w_g * (C_zetazeta[j,j] - 2 * Phi[j,-j] %*% C_zetatildazeta[,j] + Phi[j,-j] %*% C_zetatildazetatilda %*% Phi[-j,j]) +
+    C_zetatildazeta<- solve(Phi_u[-j,-j])%*%C_zetazeta[-j,]
+    C_zetatildazetatilda<- solve(Phi_u[-j,-j])%*%C_zetazeta[-j,-j]%*%solve(Phi_u[-j,-j])
+    Phi_u[j,j] <- w_g * (C_zetazeta[j,j] - 2 * (Phi_u[j,-j]+Phi_g[j,-j]) %*% C_zetatildazeta[,j] + (Phi_u[j,-j]+Phi_g[j,-j]) %*% C_zetatildazetatilda %*% (Phi_u[-j,j]+Phi_g[-j,j])) +
       Phi[j,-j] %*% solve(Phi[-j,-j]) %*% Phi[-j,j]
   }
 
-  ## increment components weights
-  w_alpha_u <- sapply(c(1:M), function(j) {1/w_g*phi[j,j]})
+  ## increment components updating
+  #alpha
+  w_alpha_g <- sapply(c(1:M), function(j) {1/w_g*phi[j,j]})
+  for (j in which(.is_est(mat$pattern$alpha_p))){
+    alpha_g[j]   <- w_alpha_u[j] * ( w_g * phi[j,j] * (e_eta[j] - (alpha[j]+alpha_u[j]) - (Beta[j,]+Beta_u[j,]) %*% e_eta) +
+                                   w_g * phi[j,-j] %*% (e_eta - alpha - alpha_u - Beta %*% e_eta)[-j])
+  }
   
   
-  
-  return(list(alpha=alpha,
-              Beta=Beta,
-              Phi=Phi))
+  return(list(alpha=alpha_u,
+              Beta=Beta_u,
+              Phi=Phi_u))
 } 
 
 dml_cal   <- function(Sigma=Sigma,e_v=e_v,Sigma_vv=subset(ini$Sigma_etaeta,G_obs,G_obs),mu_v=subset(ini$mu_eta,G_obs)){
