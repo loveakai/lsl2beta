@@ -1,4 +1,12 @@
 # lsl2beta
+
+20170224</p>
+1. single group在新架構可正確使用
+
+20170220</p>
+1. 修正變數名稱
+2. 將increment component改成list
+
 20170215</p>
 1. 修正e_step中的C_vv算法</p>
 
