@@ -154,8 +154,8 @@ cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,mat=ini$mat,e_step=e_step,type=type)
     j      <- i-(k-1)*M
     if (j<=k) {} else {
       lk<-k
-      C_zetatildazeta     <- lapply(1:n_gps, function(x) {solve(Phi_u+Phi_g[[x]])[-j,-j]%*%C_zetazeta[[x]][-j,]})
-      C_zetatildazetatilda<- lapply(1:n_gps, function(x) {solve(Phi_u+Phi_g[[x]])[-j,-j]%*%C_zetazeta[[x]][-j,-j]%*%solve(Phi_u+Phi_g[[x]])[-j,-j]})
+      C_zetatildazeta     <- lapply(1:n_gps, function(x) {solve(Phi_u[-j,-j]+Phi_g[[x]][-j,-j])%*%C_zetazeta[[x]][-j,]})
+      C_zetatildazetatilda<- lapply(1:n_gps, function(x) {solve(Phi_u[-j,-j]+Phi_g[[x]][-j,-j])%*%C_zetazeta[[x]][-j,-j]%*%solve(Phi_u[-j,-j]+Phi_g[[x]][-j,-j])})
       var_phi   <- lapply(1:n_gps, function(x) sapply(c(1:M), varphi, Phi_u+Phi_g[[x]]))
       w_phi_u   <- lapply(1:n_gps, function(x) 1/((w_g[[x]]/var_phi[[x]][j])*C_zetatildazetatilda[[x]][lk,lk])) %>% unlist %>% sum
       Phi_u[j,k]<- 
@@ -210,14 +210,9 @@ cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,mat=ini$mat,e_step=e_step,type=type)
     }
       
     
-      C_zetazeta<- lapply(1:n_gps, function(x) {C_etaeta[[x]] - e_eta[[x]]%*%(alpha_u+alpha_g[[x]]) -  C_etaeta[[x]] %*% t(Beta_u+Beta_g[[x]]) - (alpha_u+alpha_g[[x]]) %*% t(e_eta[[x]]) +
-          (alpha_u+alpha_g[[x]]) %*% t(alpha_u+alpha_g[[x]]) + (alpha_u+alpha_g[[x]]) %*% t(e_eta[[x]]) %*% t(Beta_u+Beta_g[[x]]) - (Beta_u+Beta_g[[x]]) %*% t(C_etaeta[[x]]) + 
-          (Beta_u+Beta_g[[x]]) %*% e_eta[[x]] %*% t(alpha_u+alpha_g[[x]]) + (Beta_u+Beta_g[[x]]) %*% C_etaeta[[x]] %*% t(Beta_u+Beta_g[[x]])})
-      
-    
       for (j in 1:M){
-        C_zetatildazeta      <- solve(Phi_u+Phi_g[[x]])[-j,-j]%*%C_zetazeta[[x]][-j,]
-        C_zetatildazetatilda <- solve(Phi_u+Phi_g[[x]])[-j,-j]%*%C_zetazeta[[x]][-j,-j]%*%solve(Phi_u+Phi_g[[x]])[-j,-j]
+        C_zetatildazeta      <- solve(Phi_u[-j,-j]+Phi_g[[x]][-j,-j])%*%C_zetazeta[[x]][-j,]
+        C_zetatildazetatilda <- solve(Phi_u[-j,-j]+Phi_g[[x]][-j,-j])%*%C_zetazeta[[x]][-j,-j]%*%solve(Phi_u[-j,-j]+Phi_g[[x]][-j,-j])
         Phi_g[[x]][j,j] <- C_zetazeta[[x]][j,j] - 2 * (Phi_u[j,-j]+Phi_g[[x]][j,-j]) %*% C_zetatildazeta[,j] + (Phi_u[j,-j]+Phi_g[[x]][j,-j]) %*% C_zetatildazetatilda %*% (Phi_u[-j,j]+Phi_g[[x]][-j,j]) +
           (Phi_u[j,-j]+Phi_g[[x]][j,-j]) %*% solve(Phi_u[-j,-j]+Phi_g[[x]][-j,-j]) %*% (Phi_u[-j,j]+Phi_g[[x]][-j,j])
       }

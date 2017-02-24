@@ -93,6 +93,7 @@ v         <- subset(eta,G_obs)
             ini       <- list(IBinv=IBinv,mu_eta=mu_eta,Sigma_etaeta=Sigma_etaeta,Sigma=Sigma,G_obs=G_obs,e_v=e_v,mat=mat)
  
             for (it in 1:500){
+              print(it)
               e_step    <- estep(ini)
               cm_step   <- cmstep(w_g=w_g,JK=JK,JLK=JLK,mat=ini$mat,e_step=e_step,type="L1")
               ini$mat$value$Phi_u   <-Phi_u     <- cm_step$Phi_u
@@ -114,16 +115,5 @@ v         <- subset(eta,G_obs)
           
 #}
 
-
-# increment components weights
-w_alpha_u <- sapply(c(1:M), function(j) {1/w_g*phi[j,j]})
-w_beta_u  <- mapply(function(j,k) 1/(w_g*solve(Phi[j,j])*C_etaeta[k,k]), j=JK[,1], k=JK[,2] ,SIMPLIFY = T) %>% matrix(nrow=M,byrow=T)
-diag(w_beta_u)<-0
-w_phi_u   <- matrix(0, M, M)
-w_phiq_u  <- mapply(function(j,lk) 1/((w_g/varphi[j])*C_zetatildazetatilda[[j]][lk,lk]),j=JLK[,1],lk=JLK[,2],SIMPLIFY = "matrix") %>% matrix(nrow=M,byrow=T)
-w_phi_u[upper.tri(w_phi_u)]<-w_phiq_u[upper.tri(w_phiq_u,diag=T)]
-w_phi_u[lower.tri(w_phi_u)]<-w_phiq_u[lower.tri(w_phiq_u)]
-
-# increment components updating
 
 
