@@ -21,11 +21,10 @@ x9~~(1-0.8^2)*x9
 F2~~1*F2
 F3~~1*F3
 F1~~1*F1
-F1~~0.4*F2
-F1~~0.4*F3
-F2~~0.4*F3
+F1~~0*F2
+F1~~0*F3
+F2~~0*F3
 '
-
 
 model.cfa2<-'
 F1=~0.8*x1+0.6*x2+0.6*x3
@@ -48,9 +47,33 @@ F1~~0.4*F3
 F2~~0.4*F3
 '
 
+
+
+model.cfa3<-'
+F1=~0.8*x1+0.4*x2+0.4*x3
+F2=~0.8*x4+0.4*x5+0.4*x6
+F3=~0.8*x7+0.4*x8+0.4*x9
+x1~~(1-0.8^2)*x1
+x2~~(1-0.4^2)*x2
+x3~~(1-0.4^2)*x3
+x4~~(1-0.8^2)*x4
+x5~~(1-0.4^2)*x5
+x6~~(1-0.4^2)*x6
+x7~~(1-0.8^2)*x7
+x8~~(1-0.4^2)*x8
+x9~~(1-0.4^2)*x9
+F2~~1*F2
+F3~~1*F3
+F1~~1*F1
+F1~~0.4*F2
+F1~~0.4*F3
+F2~~0.4*F3
+'
+
 dta       <-list()
 dta[[1]]  <- lavaan::simulateData(model.cfa,sample.nobs = 10000L) #%>% cbind(.,sample(c(1,2),size=nrow(.),rep=T))
-dta[[2]]  <- lavaan::simulateData(model.cfa2,sample.nobs = 10000L)
+#dta[[2]]  <- lavaan::simulateData(model.cfa2,sample.nobs = 10000L)
+#dta[[3]]  <- lavaan::simulateData(model.cfa3,sample.nobs = 10000L)
 #dta       <- lavaan::HolzingerSwineford1939[7:15]
 
 n_gps     <- length(dta)
@@ -63,23 +86,24 @@ Sigma     <- lapply(1:n_gps, function(x) {dta[[x]] %>% as.matrix %>% t %>% as.da
 e_v       <- lapply(1:n_gps, function(x) sapply(dta[[x]],mean)[1:n_obs] %>% `names<-`(nm[1:n_obs]))
 
 
-lambda <- matrix(0, 9, 3)
+lambda <- matrix(NA, 9, 3)
 lambda[c(1,2,3), 1] <- lambda[c(4,5,6), 2] <- lambda[c(7,8,9), 3] <- 1
 
-Beta_p    <- matrix(0, ncol = M, nrow = M) %>% `colnames<-`(nm) %>% `rownames<-`(nm)
-Beta_p[c(1,2,3), 10] <- Beta_p[c(4,5,6), 11] <- Beta_p[c(7,8,9), 12] <- 1  
-Beta      <- Beta <- 0.8*.is_one(Beta_p) #starting value of Beta
-Beta[c(2,3), 10] <- Beta[c(5,6), 11] <- Beta[c(8,9), 12] <- 1  
+# Beta_p    <- matrix(0, ncol = M, nrow = M) %>% `colnames<-`(nm) %>% `rownames<-`(nm)
+# Beta_p[c(1,2,3), 10] <- Beta_p[c(4,5,6), 11] <- Beta_p[c(7,8,9), 12] <- 1  
+# Beta      <- Beta <- 0.8*.is_one(Beta_p) #starting value of Beta
+# Beta[c(2,3), 10] <- Beta[c(5,6), 11] <- Beta[c(8,9), 12] <- 1  
 
-# Phi_p     <- matrix(0,M,M)
+Phi_p     <- matrix(0,M,M)
+Phi_p[c(11,12),10] <- Phi_p[c(10,12),11] <- Phi_p[c(10,11),12] <- NA
 # Phi       <- matrix(0,M,M)
 # Phi[(n_obs+1):M,(n_obs+1):M] <- 0.4
 # diag(Phi) <- 1-0.8^2
 # Phi[10,10]<-Phi[11,11]<-Phi[12,12]<-1
 
-mat       <- matgen(lambda=lambda,Beta = Beta,scale=T)
+#mat       <- matgen(lambda=lambda,Beta = Beta,scale=T)
 
-#mat       <- matgen(lambda=lambda)
+mat       <- matgen(lambda=lambda,Phi_p = Phi_p)
 
 eta       <- vector(mode = "numeric",M)   %>%`names<-`(nm)
 zeta      <- vector(mode = "numeric",M)   %>%`names<-`(nm)

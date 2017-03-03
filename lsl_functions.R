@@ -158,10 +158,12 @@ cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,mat=ini$mat,e_step=e_step,type=type)
       C_zetatildazetatilda<- lapply(1:n_gps, function(x) {solve(Phi_u[-j,-j]+Phi_g[[x]][-j,-j])%*%C_zetazeta[[x]][-j,-j]%*%solve(Phi_u[-j,-j]+Phi_g[[x]][-j,-j])})
       var_phi   <- lapply(1:n_gps, function(x) sapply(c(1:M), varphi, Phi_u+Phi_g[[x]]))
       w_phi_u   <- 1/(sapply(1:n_gps, function(x) {(w_g[[x]]/var_phi[[x]][j])*C_zetatildazetatilda[[x]][lk,lk]}) %>% sum)
-      Phi_u[j,k]<- 
+      phi_u<- 
         w_phi_u * (
           sapply(1:n_gps, function(x) {(w_g[[x]] / var_phi[[x]][j]) * (C_zetatildazeta[[x]][lk,j] - Phi_u[j,-c(j,k)] %*% matrix(C_zetatildazetatilda[[x]][-lk,lk]) - 
                                                  Phi_g[[x]][j,-j] %*% C_zetatildazetatilda[[x]][,lk])})  %>% sum )
+      cth<-is.na(mat$pattern$Phi_p[i])
+      Phi_u[j,k]<-penalty(theta=phi_u,gamma=0.025,cth=cth,w=w_phi_u,delta=2.5,type=type)
     }
   }
   Phi_u[upper.tri(Phi_u)]<-t(Phi_u)[upper.tri(Phi_u)]
@@ -202,7 +204,9 @@ cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,mat=ini$mat,e_step=e_step,type=type)
           C_zetatildazetatilda<- solve(Phi_u[-j,-j]+Phi_g[[x]][-j,-j])%*%C_zetazeta[[x]][-j,-j]%*%solve(Phi_u[-j,-j]+Phi_g[[x]][-j,-j])
           var_phi   <- varphi(j,(Phi_u+Phi_g[[x]]))
           w_phi_g   <- 1/(w_g[[x]]/var_phi*C_zetatildazetatilda[lk,lk])
-          Phi_g[[x]][j,k]<- w_phi_g * (w_g[[x]] / var_phi) * (C_zetatildazeta[lk,j] - Phi_u[j,-j] %*% matrix(C_zetatildazetatilda[,lk]) - Phi_g[[x]][j,-c(j,k)] %*% matrix(C_zetatildazetatilda[-lk,lk]))
+          phi_g     <- w_phi_g * (w_g[[x]] / var_phi) * (C_zetatildazeta[lk,j] - Phi_u[j,-j] %*% matrix(C_zetatildazetatilda[,lk]) - Phi_g[[x]][j,-c(j,k)] %*% matrix(C_zetatildazetatilda[-lk,lk]))
+          cth<-is.na(mat$pattern$Phi_p[i])
+          Phi_g[[x]][j,k]<-penalty(theta=phi_g,gamma=0.025,cth=cth,w=w_phi_g,delta=2.5,type=type)
         }
        }
       Phi_g[[x]][upper.tri(Phi_g[[x]])]<-t(Phi_g[[x]])[upper.tri(Phi_g[[x]])]
@@ -213,8 +217,10 @@ cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,mat=ini$mat,e_step=e_step,type=type)
       for (j in 1:M){
         C_zetatildazeta      <- solve(Phi_u[-j,-j]+Phi_g[[x]][-j,-j])%*%C_zetazeta[[x]][-j,]
         C_zetatildazetatilda <- solve(Phi_u[-j,-j]+Phi_g[[x]][-j,-j])%*%C_zetazeta[[x]][-j,-j]%*%solve(Phi_u[-j,-j]+Phi_g[[x]][-j,-j])
-        Phi_g[[x]][j,j] <- C_zetazeta[[x]][j,j] - 2 * (Phi_u[j,-j]+Phi_g[[x]][j,-j]) %*% C_zetatildazeta[,j] + (Phi_u[j,-j]+Phi_g[[x]][j,-j]) %*% C_zetatildazetatilda %*% (Phi_u[-j,j]+Phi_g[[x]][-j,j]) +
+        phi_g                <- C_zetazeta[[x]][j,j] - 2 * (Phi_u[j,-j]+Phi_g[[x]][j,-j]) %*% C_zetatildazeta[,j] + (Phi_u[j,-j]+Phi_g[[x]][j,-j]) %*% C_zetatildazetatilda %*% (Phi_u[-j,j]+Phi_g[[x]][-j,j]) +
           (Phi_u[j,-j]+Phi_g[[x]][j,-j]) %*% solve(Phi_u[-j,-j]+Phi_g[[x]][-j,-j]) %*% (Phi_u[-j,j]+Phi_g[[x]][-j,j])
+        cth<-is.na(mat$pattern$Phi_p[i])
+        Phi_g[[x]][j,j]<-penalty(theta=phi_g,gamma=0.025,cth=cth,w=1,delta=2.5,type=type)
       }
     
   }
