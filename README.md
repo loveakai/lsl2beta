@@ -2,7 +2,8 @@
 
 
 20170303</p>
-1. 2 groups 在架構可正確使用
+(try4)
+1. multi-groups在此架構可正確使用
 
 20170224</p>
 1. single group在新架構可正確使用
