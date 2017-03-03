@@ -124,18 +124,15 @@ v         <- subset(eta,G_obs)
             Beta_g    <- mat$value$Beta_g
             Phi_g     <- mat$value$Phi_g
             
-            #model-implied matrix
+            #initialization
             
             IBinv     <- lapply(1:n_gps, function(x) solve(ide-(Beta_u+Beta_g[[x]])))
             mu_eta    <- lapply(1:n_gps, function(x) IBinv[[x]]%*%(alpha_u+alpha_g[[x]]))
             Sigma_etaeta<-lapply(1:n_gps, function(x) IBinv[[x]]%*%(Phi_u+Phi_g[[x]])%*%t(IBinv[[x]]))
             
             w_g       <- rep(list(0.5),n_gps)
-            #alpha_g   <- rep(list(rep(0,M)),n_gps)
             JK        <- expand.grid(1:M,1:M)[2:1]
             JLK       <- expand.grid(1:(M-1),1:M)[2:1]
-            #Beta_g    <- rep(list(matrix(0, M, M)),n_gps)
-            #Phi_g     <- matrix(0, M, M) %>% `diag<-`(0.1) %>%  list() %>%  rep(n_gps)
             
             ini       <- list(IBinv=IBinv,mu_eta=mu_eta,Sigma_etaeta=Sigma_etaeta,Sigma=Sigma,G_obs=G_obs,e_v=e_v,mat=mat)
  

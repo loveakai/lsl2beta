@@ -111,7 +111,6 @@ cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,mat=ini$mat,e_step=e_step,type=type)
   Phi_g     <- mat$value$Phi_g
   Beta_g    <- mat$value$Beta_g
   alpha_g   <- mat$value$alpha_g
-  #phi       <- solve(Phi_u) # for alpha and Beta
   M         <- length(mat$pattern$alpha_p)
 
   ## reference components updating
