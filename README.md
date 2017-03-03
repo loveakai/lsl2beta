@@ -1,5 +1,10 @@
 # lsl2beta
 
+
+20170303</p>
+(try4)</p>
+1. multi-groups在此架構可正確使用
+
 20170224</p>
 1. single group在新架構可正確使用
 
