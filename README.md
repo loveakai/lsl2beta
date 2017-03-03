@@ -3,10 +3,12 @@
 
 20170303</p>
 (try4)</p>
-1. multi-groups在此架構可正確使用
+1. multi-groups在此架構可正確使用</p>
+2. Beta, Phi penalty checked</p>
+3. 排版美編修正</p>
 
 20170224</p>
-1. single group在新架構可正確使用
+1. single group在新架構可正確使用</p>
 
 20170220</p>
 1. 修正變數名稱
