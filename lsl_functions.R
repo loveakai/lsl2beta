@@ -30,12 +30,12 @@ matgen    <- function(alpha_p,Beta_p,Phi_p,alpha,Beta,Phi,lambda,scale=T){ #**di
   #matrices generation
   ## reference component
   if (missing(alpha)) {
-    alpha_u <- c(sapply(dta,mean)[1:n_obs],rep(0,n_lat))
+    alpha_u <- c(rep(0.01,n_obs),rep(0,n_lat))
   } else {
     alpha_u<-alpha }
   
   if (missing(Beta))  {
-    Beta_u  <- 1 *.is_one(Beta_p)
+    Beta_u  <- 0.8 *.is_one(Beta_p)
   } else {
     Beta_u <-Beta} 
   
@@ -118,7 +118,7 @@ cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,mat=ini$mat,e_step=e_step,type=type)
 
   # alpha
   for (j in which(.is_est(mat$pattern$alpha_p))){
-    w_alpha_u    <- lapply(1:n_gps, function(x) {1/(w_g[[x]]*solve(Phi_u+Phi_g[[x]])[j,j])}) %>% unlist %>% sum
+    w_alpha_u    <- 1/(sapply(1:n_gps, function(x) {w_g[[x]]*solve(Phi_u+Phi_g[[x]])[j,j]}) %>% sum)
     alpha_u[j]   <- 
       w_alpha_u * (
         sum(unlist(lapply(1:n_gps, function(x) {w_g[[x]] * solve(Phi_u+Phi_g[[x]])[j,j] * (e_eta[[x]][j] - alpha_g[[x]][j] - (Beta_u[j,]+Beta_g[[x]][j,]) %*% e_eta[[x]])}))) +
@@ -131,13 +131,13 @@ cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,mat=ini$mat,e_step=e_step,type=type)
   for (i in which(.is_est(mat$pattern$Beta_p))){
     k        <- ceiling(i/M)
     j        <- i-(k-1)*M
-    w_beta_u <- lapply(1:n_gps, function(x) {1/(w_g[[x]]*solve(Phi_u+Phi_g[[x]])[j,j]*C_etaeta[[x]][k,k])}) %>% unlist %>% sum
+    w_beta_u <- 1/(sapply(1:n_gps, function(x) {w_g[[x]]*solve(Phi_u+Phi_g[[x]])[j,j]*C_etaeta[[x]][k,k]}) %>% sum)
     bet_u    <- 
       w_beta_u * (
-        sum(unlist(lapply(1:n_gps, function(x) {w_g[[x]] * solve(Phi_u+Phi_g[[x]])[j,j] *
-            (C_etaeta[[x]][j,k] - e_eta[[x]][k] * (alpha_u+alpha_g[[x]])[j] - Beta_u[j,-k] %*% C_etaeta[[x]][-k,k] - Beta_g[[x]][j,] %*% C_etaeta[[x]][,k])})))+
-        sum(unlist(lapply(1:n_gps, function(x) {w_g[[x]] * solve(Phi_u+Phi_g[[x]])[j,-j] %*% 
-            (C_etaeta[[x]][-j,k] - e_eta[[x]][k] * (alpha_u+alpha_g[[x]])[-j] - (Beta_u[-j,] + Beta_g[[x]][-j,]) %*% C_etaeta[[x]][,k])})))
+        sum(sapply(1:n_gps, function(x) {w_g[[x]] * solve(Phi_u+Phi_g[[x]])[j,j] *
+            (C_etaeta[[x]][j,k] - e_eta[[x]][k] * (alpha_u+alpha_g[[x]])[j] - Beta_u[j,-k] %*% C_etaeta[[x]][-k,k] - Beta_g[[x]][j,] %*% C_etaeta[[x]][,k])}))+
+        sum(sapply(1:n_gps, function(x) {w_g[[x]] * solve(Phi_u+Phi_g[[x]])[j,-j] %*% 
+            (C_etaeta[[x]][-j,k] - e_eta[[x]][k] * (alpha_u+alpha_g[[x]])[-j] - (Beta_u[-j,] + Beta_g[[x]][-j,]) %*% C_etaeta[[x]][,k])}))
       )
     cth<-is.na(mat$pattern$Beta_p[i])
     Beta_u[j,k]<-penalty(theta=bet_u,gamma=0.025,cth=cth,w=w_beta_u,delta=2.5,type=type)
@@ -157,16 +157,16 @@ cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,mat=ini$mat,e_step=e_step,type=type)
       C_zetatildazeta     <- lapply(1:n_gps, function(x) {solve(Phi_u[-j,-j]+Phi_g[[x]][-j,-j])%*%C_zetazeta[[x]][-j,]})
       C_zetatildazetatilda<- lapply(1:n_gps, function(x) {solve(Phi_u[-j,-j]+Phi_g[[x]][-j,-j])%*%C_zetazeta[[x]][-j,-j]%*%solve(Phi_u[-j,-j]+Phi_g[[x]][-j,-j])})
       var_phi   <- lapply(1:n_gps, function(x) sapply(c(1:M), varphi, Phi_u+Phi_g[[x]]))
-      w_phi_u   <- lapply(1:n_gps, function(x) 1/((w_g[[x]]/var_phi[[x]][j])*C_zetatildazetatilda[[x]][lk,lk])) %>% unlist %>% sum
+      w_phi_u   <- 1/(sapply(1:n_gps, function(x) {(w_g[[x]]/var_phi[[x]][j])*C_zetatildazetatilda[[x]][lk,lk]}) %>% sum)
       Phi_u[j,k]<- 
         w_phi_u * (
-          lapply(1:n_gps, function(x) {(w_g[[x]] / var_phi[[x]][j]) * (C_zetatildazeta[[x]][lk,j] - Phi_u[j,-c(j,k)] %*% matrix(C_zetatildazetatilda[[x]][-lk,lk]) - 
-                                                 Phi_g[[x]][j,-j] %*% C_zetatildazetatilda[[x]][,lk])}) %>% unlist %>% sum )
+          sapply(1:n_gps, function(x) {(w_g[[x]] / var_phi[[x]][j]) * (C_zetatildazeta[[x]][lk,j] - Phi_u[j,-c(j,k)] %*% matrix(C_zetatildazetatilda[[x]][-lk,lk]) - 
+                                                 Phi_g[[x]][j,-j] %*% C_zetatildazetatilda[[x]][,lk])})  %>% sum )
     }
   }
   Phi_u[upper.tri(Phi_u)]<-t(Phi_u)[upper.tri(Phi_u)]
 
-  # increment components updating
+  ## increment components updating
   for (x in 1:n_gps) {
   #alpha
     if (x==1){} else {
@@ -198,10 +198,10 @@ cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,mat=ini$mat,e_step=e_step,type=type)
         j      <- i-(k-1)*M
         if (j<=k) {} else {
           lk<-k
-          C_zetatildazeta     <- solve(Phi_u+Phi_g[[x]])[-j,-j]%*%C_zetazeta[[x]][-j,]
-          C_zetatildazetatilda<- solve(Phi_u+Phi_g[[x]])[-j,-j]%*%C_zetazeta[[x]][-j,-j]%*%solve(Phi_u+Phi_g[[x]])[-j,-j]
+          C_zetatildazeta     <- solve(Phi_u[-j,-j]+Phi_g[[x]][-j,-j])%*%C_zetazeta[[x]][-j,]
+          C_zetatildazetatilda<- solve(Phi_u[-j,-j]+Phi_g[[x]][-j,-j])%*%C_zetazeta[[x]][-j,-j]%*%solve(Phi_u[-j,-j]+Phi_g[[x]][-j,-j])
           var_phi   <- varphi(j,(Phi_u+Phi_g[[x]]))
-          w_phi_g   <- 1/(w_g[[x]]*var_phi*C_zetatildazetatilda[lk,lk]) %>% unlist
+          w_phi_g   <- 1/(w_g[[x]]/var_phi*C_zetatildazetatilda[lk,lk])
           Phi_g[[x]][j,k]<- w_phi_g * (w_g[[x]] / var_phi) * (C_zetatildazeta[lk,j] - Phi_u[j,-j] %*% matrix(C_zetatildazetatilda[,lk]) - Phi_g[[x]][j,-c(j,k)] %*% matrix(C_zetatildazetatilda[-lk,lk]))
         }
        }
@@ -216,6 +216,7 @@ cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,mat=ini$mat,e_step=e_step,type=type)
         Phi_g[[x]][j,j] <- C_zetazeta[[x]][j,j] - 2 * (Phi_u[j,-j]+Phi_g[[x]][j,-j]) %*% C_zetatildazeta[,j] + (Phi_u[j,-j]+Phi_g[[x]][j,-j]) %*% C_zetatildazetatilda %*% (Phi_u[-j,j]+Phi_g[[x]][-j,j]) +
           (Phi_u[j,-j]+Phi_g[[x]][j,-j]) %*% solve(Phi_u[-j,-j]+Phi_g[[x]][-j,-j]) %*% (Phi_u[-j,j]+Phi_g[[x]][-j,j])
       }
+    
   }
  
   return(list(alpha_u=alpha_u,
