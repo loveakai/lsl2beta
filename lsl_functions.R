@@ -1,64 +1,64 @@
 betagen   <- function(lambda){
   
-  Beta_p                          <- matrix(0, ncol = M, nrow = M)
-  Beta_p[(1:n_obs),(n_obs+1):M]   <- lambda
-  #Beta_p[(n_obs+1):M,(n_obs+1):M] <- diag(1,n_lat,n_lat)
-  return(Beta_p)
+  beta_p                          <- matrix(0, ncol = n_eta, nrow = n_eta)
+  beta_p[(1:n_v),(n_v+1):n_eta]   <- lambda
+  #beta_p[(n_v+1):n_eta,(n_v+1):n_eta] <- diag(1,n_f,n_f)
+  return(beta_p)
   
 }
 
-matgen    <- function(alpha_p,Beta_p,Phi_p,alpha,Beta,Phi,lambda,scale=T){ #**diminfo could be modified
+matgen    <- function(alpha_p,beta_p,phi_p,alpha,Beta,Phi,lambda,scale=T){ #**diminfo could be modified
 
   #pattern matarices generation
   #only 3 matrices have pattern matrix, including alpha, beta, Phi
     
-  if (missing(alpha_p)) {   alpha_p <- c(rep(1,n_obs),rep(0,n_lat)) %>% `names<-`(nm) }
-  if (missing(Beta_p))  {
+  if (missing(alpha_p)) {   alpha_p <- c(rep(1,n_v),rep(0,n_f)) %>% `names<-`(nm) }
+  if (missing(beta_p))  {
     if (missing(lambda)) { 
       stop("lambda matrix is not specified")
     } else { 
-      Beta_p                        <- betagen(lambda) 
+      beta_p                        <- betagen(lambda) 
     }
   }
-  if (missing(Phi_p)) {
-    Phi_p                           <- matrix(diag(1,M,M), ncol = M, nrow = M)
-    Phi_p[(n_obs+1):M,(n_obs+1):M]  <- 1
-    colnames(Phi_p)                 <- nm
-    rownames(Phi_p)                 <- nm
+  if (missing(phi_p)) {
+    phi_p                           <- matrix(diag(1,n_eta,n_eta), ncol = n_eta, nrow = n_eta)
+    phi_p[(n_v+1):n_eta,(n_v+1):n_eta]  <- 1
+    colnames(phi_p)                 <- nm
+    rownames(phi_p)                 <- nm
   }
   
   #matrices generation
   ## reference component
   if (missing(alpha)) {
-    alpha_u <- c(rep(0.01,n_obs),rep(0,n_lat))
+    alpha_r <- c(rep(0.01,n_v),rep(0,n_f))
   } else {
-    alpha_u<-alpha }
+    alpha_r<-alpha }
   
   if (missing(Beta))  {
-    Beta_u  <- 0.8 *.is_one(Beta_p)
+    beta_r  <- 0.8 *.is_one(beta_p)
   } else {
-    Beta_u <-Beta} 
+    beta_r <-Beta} 
   
   if (missing(Phi))   {
-    #Phi_u   <- matrix(diag(c(rep(0.1,n_obs,n_obs),rep(1,n_lat,n_lat))), ncol = M, nrow = M)
-    Phi_u <- diag(0,M,M)
+    #phi_r   <- matrix(diag(c(rep(0.1,n_v,n_v),rep(1,n_f,n_f))), ncol = n_eta, nrow = n_eta)
+    phi_r <- diag(0,n_eta,n_eta)
     } else {
-    Phi_u <- Phi
+    phi_r <- Phi
   }
   
-  rownames(Phi_u)   <- colnames(Phi_u)   <- rownames(Beta_u)  <- colnames(Beta_u)  <-names(alpha_u)      <- nm
+  rownames(phi_r)   <- colnames(phi_r)   <- rownames(beta_r)  <- colnames(beta_r)  <-names(alpha_r)      <- nm
 
-  if (scale) {Beta_p[apply(Beta_p[(1:n_obs),(n_obs+1):M] == 1, 2, function(x) min(which(x))) %>% cbind((n_obs+1):M)] <- 0}　
+  if (scale) {beta_p[apply(beta_p[(1:n_v),(n_v+1):n_eta] == 1, 2, function(x) min(which(x))) %>% cbind((n_v+1):n_eta)] <- 0}　
   
   ## increment component
-  alpha_g<-rep(list(0*alpha_u),n_gps)
-  Beta_g <-rep(list(0*Beta_u),n_gps)
+  alpha_i<-rep(list(0*alpha_r),n_groups)
+  beta_i <-rep(list(0*beta_r),n_groups)
   
-  g<-0.1*diag(ncol(Phi_u))
-  g[(n_obs+1):M,(n_obs+1):M]<-(diag(n_lat))
-  Phi_g  <-rep(list(g %>%`colnames<-`(nm) %>% `rownames<-`(nm)),n_gps) 
+  g<-0.1*diag(ncol(phi_r))
+  g[(n_v+1):n_eta,(n_v+1):n_eta]<-(diag(n_f))
+  phi_i  <-rep(list(g %>%`colnames<-`(nm) %>% `rownames<-`(nm)),n_groups) 
   
-  return(list(pattern=list(alpha_p=alpha_p,Beta_p=Beta_p,Phi_p=Phi_p),value=list(alpha_u=alpha_u,Beta_u=Beta_u,Phi_u=Phi_u,alpha_g=alpha_g,Beta_g=Beta_g,Phi_g=Phi_g)))
+  return(list(pattern=list(alpha_p=alpha_p,beta_p=beta_p,phi_p=phi_p),value=list(alpha_r=alpha_r,beta_r=beta_r,phi_r=phi_r,alpha_i=alpha_i,beta_i=beta_i,phi_i=phi_i)))
   
 }
 
@@ -66,7 +66,7 @@ threshold <- function(theta,gma){
    sign(theta)*max(abs(theta)-gma,0) 
 }
 
-varphi    <- function(m,Phi) {diag(Phi)[m]-Phi[m,-m]%*%solve(Phi[-m,-m])%*%Phi[-m,m]}
+varphi    <- function(x,Phi) {diag(Phi)[x]-Phi[x,-x]%*%solve(Phi[-x,-x])%*%Phi[-x,x]}
 
 penalty   <- function(theta,gamma,cth,w,delta,type){
   if (type == "L1") {
@@ -86,154 +86,229 @@ penalty   <- function(theta,gamma,cth,w,delta,type){
 }
 
 estep     <- function(ini){
-  mu_v      <- lapply(1:n_gps, function(x) subset(ini$mu_eta[[x]],ini$G_obs))
-  Sigma_veta<- lapply(1:n_gps, function(x) subset(ini$Sigma_etaeta[[x]],ini$G_obs))
-  Sigma_etav<- lapply(1:n_gps, function(x) t(Sigma_veta[[x]]))
-  Sigma_vv  <- lapply(1:n_gps, function(x) subset(ini$Sigma_etaeta[[x]],ini$G_obs,ini$G_obs))
-  J         <- lapply(1:n_gps, function(x) ini$mu_eta[[x]] - Sigma_etav[[x]] %*% solve(Sigma_vv[[x]]) %*% mu_v[[x]])
-  K         <- lapply(1:n_gps, function(x) Sigma_etav[[x]] %*% solve(Sigma_vv[[x]]))
-  C_vv      <- lapply(1:n_gps, function(x) ini$Sigma[[x]])
-  e_eta     <- lapply(1:n_gps, function(x) J[[x]]+K[[x]]%*%ini$e_v[[x]])
-  C_etaeta  <- lapply(1:n_gps, function(x) {ini$Sigma_etaeta[[x]] - Sigma_etav[[x]] %*% solve(Sigma_vv[[x]]) %*% Sigma_veta[[x]] +
-    J[[x]] %*% t(J[[x]]) + J[[x]] %*% t(ini$e_v[[x]]) %*% t(K[[x]]) + K[[x]] %*% ini$e_v[[x]] %*% t(J[[x]]) + K[[x]] %*% C_vv[[x]] %*% t(K[[x]])})
+  mu_v      <- lapply(1:n_groups, function(i_groups) subset(ini$mu_eta[[i_groups]],ini$G_eta))
+  sigma_vf  <- lapply(1:n_groups, function(i_groups) subset(ini$sigma_eta[[i_groups]],ini$G_eta))
+  sigma_fv  <- lapply(1:n_groups, function(i_groups) t(sigma_vf[[i_groups]]))
+  sigma_v   <- lapply(1:n_groups, function(i_groups) subset(ini$sigma_eta[[i_groups]],ini$G_eta,ini$G_eta))
+  J         <- lapply(1:n_groups, function(i_groups) ini$mu_eta[[i_groups]] - sigma_fv[[i_groups]] %*% solve(sigma_v[[i_groups]]) %*% mu_v[[i_groups]])
+  K         <- lapply(1:n_groups, function(i_groups) sigma_fv[[i_groups]] %*% solve(sigma_v[[i_groups]]))
+  c_v       <- lapply(1:n_groups, function(i_groups) ini$sigma[[i_groups]])
+  e_eta     <- lapply(1:n_groups, function(i_groups) J[[i_groups]]+K[[i_groups]]%*%ini$e_v[[i_groups]])
+  c_eta  <- lapply(1:n_groups, function(i_groups) {ini$sigma_eta[[i_groups]] - sigma_fv[[i_groups]] %*% solve(sigma_v[[i_groups]]) %*% sigma_vf[[i_groups]] +
+    J[[i_groups]] %*% t(J[[i_groups]]) + J[[i_groups]] %*% t(ini$e_v[[i_groups]]) %*% t(K[[i_groups]]) + K[[i_groups]] %*% ini$e_v[[i_groups]] %*% t(J[[i_groups]]) +
+    K[[i_groups]] %*% c_v[[i_groups]] %*% t(K[[i_groups]])})
   
-  return(list(e_eta=e_eta, C_etaeta=C_etaeta))
+  return(list(e_eta=e_eta, c_eta=c_eta))
 }
 
-cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,mat=ini$mat,e_step=e_step,type=type){
-  if (missing(type)) {type<-"L1"}
+cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,mat=ini$mat,e_step=e_step,type=type,gamma=gamma,delta=delta){
   
   e_eta     <- e_step$e_eta
-  C_etaeta  <- e_step$C_etaeta
-  Phi_u     <- mat$value$Phi_u
-  Beta_u    <- mat$value$Beta_u
-  alpha_u   <- mat$value$alpha_u
-  Phi_g     <- mat$value$Phi_g
-  Beta_g    <- mat$value$Beta_g
-  alpha_g   <- mat$value$alpha_g
-  M         <- length(mat$pattern$alpha_p)
+  c_eta     <- e_step$c_eta
+  phi_r     <- mat$value$phi_r
+  beta_r    <- mat$value$beta_r
+  alpha_r   <- mat$value$alpha_r
+  phi_i     <- mat$value$phi_i
+  beta_i    <- mat$value$beta_i
+  alpha_i   <- mat$value$alpha_i
+  n_eta     <- length(mat$pattern$alpha_p)
 
   ## reference components updating
 
   # alpha
   for (j in which(.is_est(mat$pattern$alpha_p))){
-    w_alpha_u    <- 1/(sapply(1:n_gps, function(x) {w_g[[x]]*solve(Phi_u+Phi_g[[x]])[j,j]}) %>% sum)
-    alpha_u[j]   <- 
-      w_alpha_u * (
-        sum(unlist(lapply(1:n_gps, function(x) {w_g[[x]] * solve(Phi_u+Phi_g[[x]])[j,j] * (e_eta[[x]][j] - alpha_g[[x]][j] - (Beta_u[j,]+Beta_g[[x]][j,]) %*% e_eta[[x]])}))) +
-        sum(unlist(lapply(1:n_gps, function(x) {w_g[[x]] * solve(Phi_u+Phi_g[[x]])[j,-j]  %*% (e_eta[[x]] - (alpha_u + alpha_g[[x]]) - (Beta_u+Beta_g[[x]]) %*% e_eta[[x]])[-j]})))
+    w_alpha_r    <- 1/(sapply(1:n_groups, function(i_groups) {w_g[[i_groups]]*solve(phi_r+phi_i[[i_groups]])[j,j]}) %>% sum)
+    alpha_r[j]   <- 
+      w_alpha_r * (
+        sum(unlist(lapply(1:n_groups, function(i_groups) {
+          w_g[[i_groups]] * solve(phi_r+phi_i[[i_groups]])[j,j] * (e_eta[[i_groups]][j] - alpha_i[[i_groups]][j] - (beta_r[j,]+beta_i[[i_groups]][j,]) %*% e_eta[[i_groups]])}))) +
+        sum(unlist(lapply(1:n_groups, function(i_groups) {
+          w_g[[i_groups]] * solve(phi_r+phi_i[[i_groups]])[j,-j]  %*% (e_eta[[i_groups]] - (alpha_r + alpha_i[[i_groups]]) - (beta_r+beta_i[[i_groups]]) %*% e_eta[[i_groups]])[-j]})))
         )
         }
 
   # Beta
   
-  for (i in which(.is_est(mat$pattern$Beta_p))){
-    k        <- ceiling(i/M)
-    j        <- i-(k-1)*M
-    w_beta_u <- 1/(sapply(1:n_gps, function(x) {w_g[[x]]*solve(Phi_u+Phi_g[[x]])[j,j]*C_etaeta[[x]][k,k]}) %>% sum)
-    bet_u    <- 
-      w_beta_u * (
-        sum(sapply(1:n_gps, function(x) {w_g[[x]] * solve(Phi_u+Phi_g[[x]])[j,j] *
-            (C_etaeta[[x]][j,k] - e_eta[[x]][k] * (alpha_u+alpha_g[[x]])[j] - Beta_u[j,-k] %*% C_etaeta[[x]][-k,k] - Beta_g[[x]][j,] %*% C_etaeta[[x]][,k])}))+
-        sum(sapply(1:n_gps, function(x) {w_g[[x]] * solve(Phi_u+Phi_g[[x]])[j,-j] %*% 
-            (C_etaeta[[x]][-j,k] - e_eta[[x]][k] * (alpha_u+alpha_g[[x]])[-j] - (Beta_u[-j,] + Beta_g[[x]][-j,]) %*% C_etaeta[[x]][,k])}))
+  for (i in which(.is_est(mat$pattern$beta_p))){
+    k        <- ceiling(i/n_eta)
+    j        <- i-(k-1)*n_eta
+    w_beta_r <- 1/(sapply(1:n_groups, function(i_groups) {w_g[[i_groups]]*solve(phi_r+phi_i[[i_groups]])[j,j]*c_eta[[i_groups]][k,k]}) %>% sum)
+    beta    <- 
+      w_beta_r * (
+        sum(sapply(1:n_groups, function(i_groups) {w_g[[i_groups]] * solve(phi_r+phi_i[[i_groups]])[j,j] *
+            (c_eta[[i_groups]][j,k] - e_eta[[i_groups]][k] * (alpha_r+alpha_i[[i_groups]])[j] - beta_r[j,-k] %*% c_eta[[i_groups]][-k,k] - beta_i[[i_groups]][j,] %*% c_eta[[i_groups]][,k])}))+
+        sum(sapply(1:n_groups, function(i_groups) {w_g[[i_groups]] * solve(phi_r+phi_i[[i_groups]])[j,-j] %*% 
+            (c_eta[[i_groups]][-j,k] - e_eta[[i_groups]][k] * (alpha_r+alpha_i[[i_groups]])[-j] - (beta_r[-j,] + beta_i[[i_groups]][-j,]) %*% c_eta[[i_groups]][,k])}))
       )
-    cth<-is.na(mat$pattern$Beta_p[i])
-    Beta_u[j,k]<-penalty(theta=bet_u,gamma=0.025,cth=cth,w=w_beta_u,delta=2.5,type=type)
+    cth<-is.na(mat$pattern$beta_p[i])
+    beta_r[j,k]<-penalty(theta=beta,gamma=gamma,cth=cth,w=w_beta_r,delta=delta,type=type)
   }
   
   # Phi
   
-  C_zetazeta<- lapply(1:n_gps, function(x) {C_etaeta[[x]] - e_eta[[x]]%*%(alpha_u+alpha_g[[x]]) -  C_etaeta[[x]] %*% t(Beta_u+Beta_g[[x]]) - (alpha_u+alpha_g[[x]]) %*% t(e_eta[[x]]) +
-    (alpha_u+alpha_g[[x]]) %*% t(alpha_u+alpha_g[[x]]) + (alpha_u+alpha_g[[x]]) %*% t(e_eta[[x]]) %*% t(Beta_u+Beta_g[[x]]) - (Beta_u+Beta_g[[x]]) %*% t(C_etaeta[[x]]) + 
-    (Beta_u+Beta_g[[x]]) %*% e_eta[[x]] %*% t(alpha_u+alpha_g[[x]]) + (Beta_u+Beta_g[[x]]) %*% C_etaeta[[x]] %*% t(Beta_u+Beta_g[[x]])})
+  c_zeta<- lapply(1:n_groups, function(i_groups) {c_eta[[i_groups]] - e_eta[[i_groups]]%*%(alpha_r+alpha_i[[i_groups]]) -  c_eta[[i_groups]] %*% t(beta_r+beta_i[[i_groups]]) - (alpha_r+alpha_i[[i_groups]]) %*% t(e_eta[[i_groups]]) +
+    (alpha_r+alpha_i[[i_groups]]) %*% t(alpha_r+alpha_i[[i_groups]]) + (alpha_r+alpha_i[[i_groups]]) %*% t(e_eta[[i_groups]]) %*% t(beta_r+beta_i[[i_groups]]) - (beta_r+beta_i[[i_groups]]) %*% t(c_eta[[i_groups]]) + 
+    (beta_r+beta_i[[i_groups]]) %*% e_eta[[i_groups]] %*% t(alpha_r+alpha_i[[i_groups]]) + (beta_r+beta_i[[i_groups]]) %*% c_eta[[i_groups]] %*% t(beta_r+beta_i[[i_groups]])})
   
-  for (i in which(.is_est(mat$pattern$Phi_p))){
-    k      <- ceiling(i/M)
-    j      <- i-(k-1)*M
+  for (i in which(.is_est(mat$pattern$phi_p))){
+    k      <- ceiling(i/n_eta)
+    j      <- i-(k-1)*n_eta
     if (j<=k) {} else {
       lk<-k
-      C_zetatildazeta     <- lapply(1:n_gps, function(x) {solve(Phi_u[-j,-j]+Phi_g[[x]][-j,-j])%*%C_zetazeta[[x]][-j,]})
-      C_zetatildazetatilda<- lapply(1:n_gps, function(x) {solve(Phi_u[-j,-j]+Phi_g[[x]][-j,-j])%*%C_zetazeta[[x]][-j,-j]%*%solve(Phi_u[-j,-j]+Phi_g[[x]][-j,-j])})
-      var_phi   <- lapply(1:n_gps, function(x) sapply(c(1:M), varphi, Phi_u+Phi_g[[x]]))
-      w_phi_u   <- 1/(sapply(1:n_gps, function(x) {(w_g[[x]]/var_phi[[x]][j])*C_zetatildazetatilda[[x]][lk,lk]}) %>% sum)
-      phi_u<- 
-        w_phi_u * (
-          sapply(1:n_gps, function(x) {(w_g[[x]] / var_phi[[x]][j]) * (C_zetatildazeta[[x]][lk,j] - Phi_u[j,-c(j,k)] %*% matrix(C_zetatildazetatilda[[x]][-lk,lk]) - 
-                                                 Phi_g[[x]][j,-j] %*% C_zetatildazetatilda[[x]][,lk])})  %>% sum )
-      cth<-is.na(mat$pattern$Phi_p[i])
-      Phi_u[j,k]<-penalty(theta=phi_u,gamma=0.025,cth=cth,w=w_phi_u,delta=2.5,type=type)
+      c_zetatzeta <- lapply(1:n_groups, function(i_groups) {solve(phi_r[-j,-j]+phi_i[[i_groups]][-j,-j])%*%c_zeta[[i_groups]][-j,]})
+      c_zetat     <- lapply(1:n_groups, function(i_groups) {solve(phi_r[-j,-j]+phi_i[[i_groups]][-j,-j])%*%c_zeta[[i_groups]][-j,-j]%*%solve(phi_r[-j,-j]+phi_i[[i_groups]][-j,-j])})
+      var_phi     <- lapply(1:n_groups, function(i_groups) sapply(c(1:n_eta), varphi, phi_r+phi_i[[i_groups]]))
+      w_phi_r     <- 1/(sapply(1:n_groups, function(i_groups) {(w_g[[i_groups]]/var_phi[[i_groups]][j])*c_zetat[[i_groups]][lk,lk]}) %>% sum)
+      phi<- 
+        w_phi_r * (
+          sapply(1:n_groups, function(i_groups) {(w_g[[i_groups]] / var_phi[[i_groups]][j]) * (c_zetatzeta[[i_groups]][lk,j] - phi_r[j,-c(j,k)] %*% matrix(c_zetat[[i_groups]][-lk,lk]) - 
+                                                 phi_i[[i_groups]][j,-j] %*% c_zetat[[i_groups]][,lk])})  %>% sum )
+      cth<-is.na(mat$pattern$phi_p[i])
+      phi_r[j,k]<-penalty(theta=phi,gamma=gamma,cth=cth,w=w_phi_r,delta=delta,type=type)
     }
   }
-  Phi_u[upper.tri(Phi_u)]<-t(Phi_u)[upper.tri(Phi_u)]
+  phi_r[upper.tri(phi_r)]<-t(phi_r)[upper.tri(phi_r)]
 
   ## increment components updating
-  for (x in 1:n_gps) {
+  for (i_groups in 1:n_groups) {
   #alpha
-    if (x==1){} else {
+    if (i_groups==1){} else {
       for (j in which(.is_est(mat$pattern$alpha_p))){
-        w_alpha_g         <- 1/(w_g[[x]]*solve(Phi_g[[x]])[j,j])
-        alpha_g[[x]][j]   <- w_alpha_g * ( w_g[[x]] * solve(Phi_u+Phi_g[[x]])[j,j] * (e_eta[[x]][j] - alpha_u[j] - (Beta_u+Beta_g[[x]])[j,] %*% e_eta[[x]]) +
-                                       w_g[[x]] * ((Phi_u+Phi_g[[x]])[j,-j] %*% (e_eta[[x]] - (alpha_u + alpha_g[[x]]) - (Beta_u+Beta_g[[x]]) %*% e_eta[[x]])[-j]))
+        w_alpha_i         <- 1/(w_g[[i_groups]]*solve(phi_i[[i_groups]])[j,j])
+        alpha_i[[i_groups]][j]   <- w_alpha_i * ( w_g[[i_groups]] * solve(phi_r+phi_i[[i_groups]])[j,j] * (e_eta[[i_groups]][j] - alpha_r[j] - (beta_r+beta_i[[i_groups]])[j,] %*% e_eta[[i_groups]]) +
+                                       w_g[[i_groups]] * ((phi_r+phi_i[[i_groups]])[j,-j] %*% (e_eta[[i_groups]] - (alpha_r + alpha_i[[i_groups]]) - (beta_r+beta_i[[i_groups]]) %*% e_eta[[i_groups]])[-j]))
       }
   
-      for (i in which(.is_est(mat$pattern$Beta_p))){
-        k        <- ceiling(i/M)
-        j        <- i-(k-1)*M
-        w_beta_g <- 1/(w_g[[x]]*solve(Phi_u+Phi_g[[x]])[j,j]*C_etaeta[[x]][k,k])
-        bet_u    <- w_beta_g * (
-            w_g[[x]] * solve(Phi_u+Phi_g[[x]])[j,j] * (C_etaeta[[x]][j,k] - e_eta[[x]][k] * (alpha_u+alpha_g[[x]])[j] - Beta_u[j,] %*% C_etaeta[[x]][,k] - Beta_g[[x]][j,-k] %*% C_etaeta[[x]][-k,k])+
-            w_g[[x]] * solve(Phi_u+Phi_g[[x]])[j,-j] %*% (C_etaeta[[x]][-j,k] - e_eta[[x]][k] * (alpha_u+alpha_g[[x]])[-j] - (Beta_u[-j,] + Beta_g[[x]][-j,]) %*% C_etaeta[[x]][,k]))
-        cth<-is.na(mat$pattern$Beta_p[i])
-        Beta_g[[x]][j,k]<-penalty(theta=bet_u,gamma=0.075,cth=cth,w=w_beta_g,delta=2.5,type=type)
+      for (i in which(.is_est(mat$pattern$beta_p))){
+        k        <- ceiling(i/n_eta)
+        j        <- i-(k-1)*n_eta
+        w_beta_i <- 1/(w_g[[i_groups]]*solve(phi_r+phi_i[[i_groups]])[j,j]*c_eta[[i_groups]][k,k])
+        beta    <- w_beta_i * (
+            w_g[[i_groups]] * solve(phi_r+phi_i[[i_groups]])[j,j] * (c_eta[[i_groups]][j,k] - e_eta[[i_groups]][k] * (alpha_r+alpha_i[[i_groups]])[j] - beta_r[j,] %*% c_eta[[i_groups]][,k] - beta_i[[i_groups]][j,-k] %*% c_eta[[i_groups]][-k,k])+
+            w_g[[i_groups]] * solve(phi_r+phi_i[[i_groups]])[j,-j] %*% (c_eta[[i_groups]][-j,k] - e_eta[[i_groups]][k] * (alpha_r+alpha_i[[i_groups]])[-j] - (beta_r[-j,] + beta_i[[i_groups]][-j,]) %*% c_eta[[i_groups]][,k]))
+        cth<-is.na(mat$pattern$beta_p[i])
+        beta_i[[i_groups]][j,k]<-penalty(theta=beta,gamma=gamma,cth=cth,w=w_beta_i,delta=delta,type=type)
       }
   
       
-      C_zetazeta<- lapply(1:n_gps, function(x) {C_etaeta[[x]] - e_eta[[x]]%*%(alpha_u+alpha_g[[x]]) -  C_etaeta[[x]] %*% t(Beta_u+Beta_g[[x]]) - (alpha_u+alpha_g[[x]]) %*% t(e_eta[[x]]) +
-          (alpha_u+alpha_g[[x]]) %*% t(alpha_u+alpha_g[[x]]) + (alpha_u+alpha_g[[x]]) %*% t(e_eta[[x]]) %*% t(Beta_u+Beta_g[[x]]) - (Beta_u+Beta_g[[x]]) %*% t(C_etaeta[[x]]) + 
-          (Beta_u+Beta_g[[x]]) %*% e_eta[[x]] %*% t(alpha_u+alpha_g[[x]]) + (Beta_u+Beta_g[[x]]) %*% C_etaeta[[x]] %*% t(Beta_u+Beta_g[[x]])})
+      c_zeta<- lapply(1:n_groups, function(i_groups) {c_eta[[i_groups]] - e_eta[[i_groups]]%*%(alpha_r+alpha_i[[i_groups]]) -  c_eta[[i_groups]] %*% t(beta_r+beta_i[[i_groups]]) - (alpha_r+alpha_i[[i_groups]]) %*% t(e_eta[[i_groups]]) +
+          (alpha_r+alpha_i[[i_groups]]) %*% t(alpha_r+alpha_i[[i_groups]]) + (alpha_r+alpha_i[[i_groups]]) %*% t(e_eta[[i_groups]]) %*% t(beta_r+beta_i[[i_groups]]) - (beta_r+beta_i[[i_groups]]) %*% t(c_eta[[i_groups]]) + 
+          (beta_r+beta_i[[i_groups]]) %*% e_eta[[i_groups]] %*% t(alpha_r+alpha_i[[i_groups]]) + (beta_r+beta_i[[i_groups]]) %*% c_eta[[i_groups]] %*% t(beta_r+beta_i[[i_groups]])})
   
       
-      for (i in which(.is_est(mat$pattern$Phi_p))){
-        k      <- ceiling(i/M)
-        j      <- i-(k-1)*M
+      for (i in which(.is_est(mat$pattern$phi_p))){
+        k      <- ceiling(i/n_eta)
+        j      <- i-(k-1)*n_eta
         if (j<=k) {} else {
           lk<-k
-          C_zetatildazeta     <- solve(Phi_u[-j,-j]+Phi_g[[x]][-j,-j])%*%C_zetazeta[[x]][-j,]
-          C_zetatildazetatilda<- solve(Phi_u[-j,-j]+Phi_g[[x]][-j,-j])%*%C_zetazeta[[x]][-j,-j]%*%solve(Phi_u[-j,-j]+Phi_g[[x]][-j,-j])
-          var_phi   <- varphi(j,(Phi_u+Phi_g[[x]]))
-          w_phi_g   <- 1/(w_g[[x]]/var_phi*C_zetatildazetatilda[lk,lk])
-          phi_g     <- w_phi_g * (w_g[[x]] / var_phi) * (C_zetatildazeta[lk,j] - Phi_u[j,-j] %*% matrix(C_zetatildazetatilda[,lk]) - Phi_g[[x]][j,-c(j,k)] %*% matrix(C_zetatildazetatilda[-lk,lk]))
-          cth<-is.na(mat$pattern$Phi_p[i])
-          Phi_g[[x]][j,k]<-penalty(theta=phi_g,gamma=0.025,cth=cth,w=w_phi_g,delta=2.5,type=type)
+          c_zetatzeta <- solve(phi_r[-j,-j]+phi_i[[i_groups]][-j,-j])%*%c_zeta[[i_groups]][-j,]
+          c_zetat     <- solve(phi_r[-j,-j]+phi_i[[i_groups]][-j,-j])%*%c_zeta[[i_groups]][-j,-j]%*%solve(phi_r[-j,-j]+phi_i[[i_groups]][-j,-j])
+          var_phi     <- varphi(j,(phi_r+phi_i[[i_groups]]))
+          w_phi_i     <- 1/(w_g[[i_groups]]/var_phi*c_zetat[lk,lk])
+          phi       <- w_phi_i * (w_g[[i_groups]] / var_phi) * (c_zetatzeta[lk,j] - phi_r[j,-j] %*% matrix(c_zetat[,lk]) - phi_i[[i_groups]][j,-c(j,k)] %*% matrix(c_zetat[-lk,lk]))
+          cth<-is.na(mat$pattern$phi_p[i])
+          phi_i[[i_groups]][j,k]<-penalty(theta=phi,gamma=gamma,cth=cth,w=w_phi_i,delta=delta,type=type)
         }
        }
-      Phi_g[[x]][upper.tri(Phi_g[[x]])]<-t(Phi_g[[x]])[upper.tri(Phi_g[[x]])]
+      phi_i[[i_groups]][upper.tri(phi_i[[i_groups]])]<-t(phi_i[[i_groups]])[upper.tri(phi_i[[i_groups]])]
     
     }
       
     
-      for (j in 1:M){
-        C_zetatildazeta      <- solve(Phi_u[-j,-j]+Phi_g[[x]][-j,-j])%*%C_zetazeta[[x]][-j,]
-        C_zetatildazetatilda <- solve(Phi_u[-j,-j]+Phi_g[[x]][-j,-j])%*%C_zetazeta[[x]][-j,-j]%*%solve(Phi_u[-j,-j]+Phi_g[[x]][-j,-j])
-        phi_g                <- C_zetazeta[[x]][j,j] - 2 * (Phi_u[j,-j]+Phi_g[[x]][j,-j]) %*% C_zetatildazeta[,j] + (Phi_u[j,-j]+Phi_g[[x]][j,-j]) %*% C_zetatildazetatilda %*% (Phi_u[-j,j]+Phi_g[[x]][-j,j]) +
-          (Phi_u[j,-j]+Phi_g[[x]][j,-j]) %*% solve(Phi_u[-j,-j]+Phi_g[[x]][-j,-j]) %*% (Phi_u[-j,j]+Phi_g[[x]][-j,j])
-        cth<-is.na(mat$pattern$Phi_p[i])
-        Phi_g[[x]][j,j]<-penalty(theta=phi_g,gamma=0.025,cth=cth,w=1,delta=2.5,type=type)
+      for (j in 1:n_eta){
+        c_zetatzeta  <- solve(phi_r[-j,-j]+phi_i[[i_groups]][-j,-j])%*%c_zeta[[i_groups]][-j,]
+        c_zetat      <- solve(phi_r[-j,-j]+phi_i[[i_groups]][-j,-j])%*%c_zeta[[i_groups]][-j,-j]%*%solve(phi_r[-j,-j]+phi_i[[i_groups]][-j,-j])
+        phi          <- c_zeta[[i_groups]][j,j] - 2 * (phi_r[j,-j]+phi_i[[i_groups]][j,-j]) %*% c_zetatzeta[,j] + (phi_r[j,-j]+phi_i[[i_groups]][j,-j]) %*% c_zetat %*% (phi_r[-j,j]+phi_i[[i_groups]][-j,j]) +
+          (phi_r[j,-j]+phi_i[[i_groups]][j,-j]) %*% solve(phi_r[-j,-j]+phi_i[[i_groups]][-j,-j]) %*% (phi_r[-j,j]+phi_i[[i_groups]][-j,j])
+        cth<-is.na(mat$pattern$phi_p[i])
+        phi_i[[i_groups]][j,j]<-penalty(theta=phi,gamma=gamma,cth=cth,w=1,delta=delta,type=type)
       }
     
   }
  
-  return(list(alpha_u=alpha_u,
-              Beta_u=Beta_u,
-              Phi_u=Phi_u,
-              alpha_g=alpha_g,
-              Beta_g=Beta_g,
-              Phi_g=Phi_g))
+  return(list(alpha_r=alpha_r,
+              beta_r=beta_r,
+              phi_r=phi_r,
+              alpha_i=alpha_i,
+              beta_i=beta_i,
+              phi_i=phi_i))
 } 
 
-dml_cal   <- function(Sigma=Sigma,e_v=e_v,Sigma_vv=subset(ini$Sigma_etaeta,G_obs,G_obs),mu_v=subset(ini$mu_eta,G_obs)){
-  Sigma_vv_iv <- solve(Sigma_vv)
-  dml <- -log(det(Sigma_vv_iv %*% Sigma)) + sum(diag(Sigma_vv_iv%*%Sigma)) - dim(Sigma_vv)[1] + t(e_v-mu_v) %*% Sigma_vv_iv %*% (e_v-mu_v)
+ecm       <- function(mat=mat,ide=ide,G_eta=G_eta,maxit=500,cri=10^(-5),penalize=pl){
+  
+  if (missing(penalize)) {
+    message("penalize information is not specified, using default")
+    type<-"L1"
+    gamma<-0.025
+    delta<-2.5
+  } else{
+    if (exists("type",penalize))  {type<-penalize$type}     else {message("type is not specified,using default:'L1'")  ;type <-"L1"}
+    if (exists("gamma",penalize)) {gamma<-penalize$gamma}   else {message("gamma is not specified,using default:0.025");gamma<-0.025} 
+    if (exists("delta",penalize)) {delta<-penalize$delta}   else {message("delta is not specified,using default:2.5")  ;delta<-2.5}  
+  }
+  
+
+  alpha_p   <- mat$pattern$alpha_p
+  beta_p    <- mat$pattern$beta_p
+  phi_p     <- mat$pattern$phi_p
+  alpha_r   <- mat$value$alpha_r
+  beta_r    <- mat$value$beta_r
+  phi_r     <- mat$value$phi_r
+  alpha_i   <- mat$value$alpha_i
+  beta_i    <- mat$value$beta_i
+  phi_i     <- mat$value$phi_i
+  
+  #initialization
+  
+  IBinv     <- lapply(1:n_groups, function(i_groups) solve(ide-(beta_r+beta_i[[i_groups]])))
+  mu_eta    <- lapply(1:n_groups, function(i_groups) IBinv[[i_groups]]%*%(alpha_r+alpha_i[[i_groups]]))
+  sigma_eta <- lapply(1:n_groups, function(i_groups) IBinv[[i_groups]]%*%(phi_r+phi_i[[i_groups]])%*%t(IBinv[[i_groups]]))
+  
+  w_g       <- rep(list(1/3),n_groups)
+  JK        <- expand.grid(1:n_eta,1:n_eta)[2:1]
+  JLK       <- expand.grid(1:(n_eta-1),1:n_eta)[2:1]
+  
+  ini       <- list(IBinv=IBinv,mu_eta=mu_eta,sigma_eta=sigma_eta,sigma=sigma,G_eta=G_eta,e_v=e_v,mat=mat)
+
+  
+  for (it in 1:maxit){
+    cat(it, "...")
+    e_step    <- estep(ini)
+    cm_step   <- cmstep(w_g=w_g,JK=JK,JLK=JLK,mat=ini$mat,e_step=e_step,type=type,gamma=gamma,delta=delta)
+    ini$mat$value$phi_r   <- phi_r     <- cm_step$phi_r
+    ini$mat$value$beta_r  <- beta_r    <- cm_step$beta_r
+    ini$mat$value$alpha_r <- alpha_r   <- cm_step$alpha_r
+    ini$mat$value$phi_i   <- phi_i     <- cm_step$phi_i
+    ini$mat$value$beta_i  <- beta_i    <- cm_step$beta_i
+    ini$mat$value$alpha_i <- alpha_i   <- cm_step$alpha_i
+    ini$IBinv             <- lapply(1:n_groups, function(i_groups) solve(ide-(beta_r+beta_i[[i_groups]])))
+    ini$mu_eta            <- lapply(1:n_groups, function(i_groups) ini$IBinv[[i_groups]]%*%(alpha_r+alpha_i[[i_groups]]))
+    ini$sigma_eta         <- lapply(1:n_groups, function(i_groups) ini$IBinv[[i_groups]]%*%(phi_r+phi_i[[i_groups]])%*%t(ini$IBinv[[i_groups]]))
+  }
+  
+  #theta     <- c(alpha_r[.is_est(ini$mat$pattern$alpha_p)],beta_r[.is_est(ini$mat$pattern$beta_p)],phi_r[.is_est(ini$mat$pattern$phi_p)])
+  #length(theta)
+  
+  dml<-dml_cal(sigma=sigma,e_v=e_v,ini=ini,G_eta=G_eta,n_groups=n_groups,w_g=w_g)
+  
+  return(list(theta=ini,dml=dml,gamma=gamma,delta=delta,type=type,iteration=it))
+  
+}
+
+
+dml_cal   <- function(sigma=sigma,e_v=e_v,ini=ini,G_eta=G_eta,n_groups=n_groups,w_g=w_g){
+  mu_v        <- lapply(1:n_groups, function(i_groups) subset(ini$mu_eta[[i_groups]],ini$G_eta))
+  sigma_v     <- lapply(1:n_groups, function(i_groups) subset(ini$sigma_eta[[i_groups]],ini$G_eta,ini$G_eta))
+  sigma_v_iv  <- lapply(1:n_groups, function(i_groups) solve(sigma_v[[i_groups]]))
+  dml <-
+    (sapply(1:n_groups, function(i_groups) {
+      w_g[[i_groups]] * (sum(diag(sigma[[i_groups]] %*% sigma_v_iv[[i_groups]])) -
+                           log(det(sigma[[i_groups]] %*% sigma_v_iv[[i_groups]]))  -
+                           dim(sigma_v[[i_groups]])[1])
+    })  +
+      sapply(1:n_groups, function(i_groups) {
+        w_g[[i_groups]] * (t(e_v[[i_groups]] - mu_v[[i_groups]]) %*% sigma_v_iv[[i_groups]] %*% (e_v[[i_groups]] -
+                                                                                                    mu_v[[i_groups]]))
+      })) %>% sum
   return(dml)
   }
