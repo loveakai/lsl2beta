@@ -7,7 +7,7 @@ betagen   <- function(lambda){
   
 }
 
-matgen    <- function(alpha_p,beta_p,phi_p,alpha,Beta,Phi,lambda,scale=T){ #**diminfo could be modified
+matgen    <- function(alpha_p,beta_p,phi_p,alpha_r,beta_r,phi_r,lambda,scale=T){ #**diminfo could be modified
 
   #pattern matarices generation
   #only 3 matrices have pattern matrix, including alpha, beta, Phi
@@ -19,6 +19,8 @@ matgen    <- function(alpha_p,beta_p,phi_p,alpha,Beta,Phi,lambda,scale=T){ #**di
     } else { 
       beta_p                        <- betagen(lambda) 
     }
+    colnames(beta_p)                 <- nm
+    rownames(beta_p)                 <- nm 
   }
   if (missing(phi_p)) {
     phi_p                           <- matrix(diag(1,n_eta,n_eta), ncol = n_eta, nrow = n_eta)
@@ -29,21 +31,21 @@ matgen    <- function(alpha_p,beta_p,phi_p,alpha,Beta,Phi,lambda,scale=T){ #**di
   
   #matrices generation
   ## reference component
-  if (missing(alpha)) {
+  if (missing(alpha_r)) {
     alpha_r <- c(rep(0.01,n_v),rep(0,n_f))
   } else {
-    alpha_r<-alpha }
+    alpha_r<-alpha_r }
   
-  if (missing(Beta))  {
+  if (missing(beta_r))  {
     beta_r  <- 0.8 *.is_one(beta_p)
   } else {
-    beta_r <-Beta} 
+    beta_r <-beta_r} 
   
-  if (missing(Phi))   {
+  if (missing(phi_r))   {
     #phi_r   <- matrix(diag(c(rep(0.1,n_v,n_v),rep(1,n_f,n_f))), ncol = n_eta, nrow = n_eta)
     phi_r <- diag(0,n_eta,n_eta)
     } else {
-    phi_r <- Phi
+    phi_r <- phi_r
   }
   
   rownames(phi_r)   <- colnames(phi_r)   <- rownames(beta_r)  <- colnames(beta_r)  <-names(alpha_r)      <- nm

@@ -71,9 +71,9 @@ F2~~0.4*F3
 '
 
 dta       <-list()
-dta[[1]]  <- lavaan::simulateData(model.cfa,sample.nobs = 10000L) #%>% cbind(.,sample(c(1,2),size=nrow(.),rep=T))
-dta[[2]]  <- lavaan::simulateData(model.cfa2,sample.nobs = 10000L)
-dta[[3]]  <- lavaan::simulateData(model.cfa3,sample.nobs = 10000L)
+dta[[1]]  <- lavaan::simulateData(model.cfa,sample.nobs = 10L) #%>% cbind(.,sample(c(1,2),size=nrow(.),rep=T))
+dta[[2]]  <- lavaan::simulateData(model.cfa2,sample.nobs = 10L)
+dta[[3]]  <- lavaan::simulateData(model.cfa3,sample.nobs = 10L)
 #dta       <- lavaan::HolzingerSwineford1939[7:15]
 
 n_groups  <- length(dta)
@@ -103,13 +103,14 @@ lambda[c(1,2,3), 1] <- lambda[c(4,5,6), 2] <- lambda[c(7,8,9), 3] <- 1
 
 #mat       <- matgen(lambda=lambda,Beta = Beta,scale=T)
 
-mat       <- matgen(lambda=lambda)
 
 eta       <- vector(mode = "numeric",n_eta)   %>%`names<-`(nm)
 zeta      <- vector(mode = "numeric",n_eta)   %>%`names<-`(nm)
 ide       <- diag(1, ncol = n_eta, nrow = n_eta)  %>% `colnames<-`(nm) %>% `rownames<-`(nm) 
 G_eta     <- c(rep(T,n_v),rep(F,n_f)) %>%`names<-`(nm)
 v         <- subset(eta,G_eta)
+
+mat       <- matgen(lambda=lambda)
 penalize  <- list(type="L1",delta=0.025,gamma=2.5)
 
 pl <-penalize
@@ -117,3 +118,29 @@ pl <-penalize
 #ECM
 
 ecmm<-ecm(mat=mat,ide=ide,G_eta=G_eta,maxit=500,cri=10^(-5),penalize=pl)
+
+
+patterngen<-function(alpha_p,beta_p,phi_p,alpha,Beta,Phi,lambda,mat,scale=T){
+  #if (missing(lambda)&&missing(mat)) stop("lambda matrix must be specified")
+  if (missing(mat)) {mat<-matgen(alpha_p,beta_p,phi_p,alpha,Beta,Phi,lambda,mat,scale=T)}
+  pattern=list(
+  alpha_p_v = subset(mat$pattern$alpha_p,G_eta),
+  alpha_p_f = subset(mat$pattern$alpha_p,!G_eta),
+  beta_p_vv = subset(mat$pattern$beta_p,G_eta,G_eta),
+  beta_p_ff = subset(mat$pattern$beta_p,!G_eta,!G_eta),
+  beta_p_vf = subset(mat$pattern$beta_p,G_eta,!G_eta),
+  beta_p_fv = subset(mat$pattern$beta_p,!G_eta,G_eta),
+  phi_p_vv  = subset(mat$pattern$phi_p,G_eta,G_eta),
+  phi_p_ff  = subset(mat$pattern$phi_p,!G_eta,!G_eta),
+  phi_p_vf  = subset(mat$pattern$phi_p,G_eta,!G_eta),
+  phi_p_fv  = subset(mat$pattern$phi_p,!G_eta,G_eta)
+  )
+}
+
+
+specify <- function(pattern,value,difference){
+  
+  if (!exists("beta_vf",pattern)) stop("beta_vf must be specified")
+  if (is.list(pattern)&is.list(value)&is.list(differnence)) stop("arguments must be lists")
+  
+}
