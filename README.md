@@ -1,6 +1,7 @@
 # lsl2beta
 
-20170307</p>
+
+##### 20170307</p>
 (try5)</p>
 1. 將ecm製作成function</p>
 2  更新multi-groups的dml
