@@ -11,7 +11,7 @@ matgen    <- function(alpha_p,beta_p,phi_p,alpha_r,beta_r,phi_r,lambda,scale=T){
 
   #pattern matarices generation
   #only 3 matrices have pattern matrix, including alpha, beta, Phi
-    
+  nm <- c(v_label,f_label)  
   if (missing(alpha_p)) {   alpha_p <- c(rep(1,n_v),rep(0,n_f)) %>% `names<-`(nm) }
   if (missing(beta_p))  {
     if (missing(lambda)) { 
@@ -351,3 +351,15 @@ import <-
     }
     return(output)
   }
+  
+getpar    <-function(pattern,value,v_label,f_label,mat_label){
+ mapply(function(val,p,v,nm) {
+    val[p|v] %>% `names<-`(nm[p|v])},
+    val=value,
+    p=lapply(pattern,.is_est),
+    v=lapply(value,function(x) {x!=0}),
+    nm=list(c(v_label,f_label),mat_label,mat_label)) %>% `names<-`(c("alpha","beta","gamma"))
+}
+
+
+getpar(pattern=mat$pattern,value=list(mat$value$alpha_r,mat$value$beta_r,mat$value$phi_r),v_label=v_label,f_label=f_label,mat_label=mat_label)

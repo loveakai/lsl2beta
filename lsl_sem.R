@@ -70,13 +70,13 @@ F1~~0.4*F3
 F2~~0.4*F3
 '
 
-dta       <-list()
-dta[[1]]  <- lavaan::simulateData(model.cfa,sample.nobs = 1000L)  %>% cbind(group=as.factor(1))#%>% cbind(.,sample(c(1,2),size=nrow(.),rep=T))
-dta[[2]]  <- lavaan::simulateData(model.cfa2,sample.nobs = 1000L) %>% cbind(group=as.factor(2))
-dta[[3]]  <- lavaan::simulateData(model.cfa3,sample.nobs = 1000L) %>% cbind(group=as.factor(3))
-dta       <- do.call(rbind,dta)
+# dta       <-list()
+# dta[[1]]  <- lavaan::simulateData(model.cfa,sample.nobs = 1000L)  %>% cbind(group=as.factor(1))#%>% cbind(.,sample(c(1,2),size=nrow(.),rep=T))
+# dta[[2]]  <- lavaan::simulateData(model.cfa2,sample.nobs = 1000L) %>% cbind(group=as.factor(2))
+# dta[[3]]  <- lavaan::simulateData(model.cfa3,sample.nobs = 1000L) %>% cbind(group=as.factor(3))
+# dta       <- do.call(rbind,dta)
 
-#dta       <- lavaan::HolzingerSwineford1939[7:15]
+dta       <- lavaan::HolzingerSwineford1939[7:15]
 
 n_groups  <- length(dta)
 n_v       <- ncol(dta[[1]])
@@ -123,9 +123,13 @@ ecmm<-ecm(mat=mat,ide=ide,G_eta=G_eta,maxit=500,cri=10^(-5),penalize=pl)
 
 
 
-specify <- function(pattern,value,difference){
+specify <- function(pattern,value,difference,ref_group,auto_scale=T,v_label,f_label){
   
   if (!exists("beta_vf",pattern)) stop("beta_vf must be specified")
-  if (is.list(pattern)&is.list(value)&is.list(differnence)) stop("arguments must be lists")
-  
+  if (!(is.list(pattern)&is.list(value)&is.list(difference))) stop("arguments must be lists")
+  if (missing(v_label)) {v_label<-paste0("v",1:nrow(pattern$beta_vf))}
+  if (missing(f_label)) {f_label<-paste0("f",1:ncol(pattern$beta_vf))}
+  vf_label <- paste0(v_label,"<-",rep(f_label,each=length(v_label)))
+  fv_label <- paste0(f_label,"<-",rep(v_label,each=length(f_label)))
+  mat_label<- sapply(c(v_label,f_label),function(x) paste0(c(v_label,f_label),"<-",x)) %>% `rownames<-`(c(v_label,f_label))
 }

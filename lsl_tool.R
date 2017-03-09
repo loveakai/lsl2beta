@@ -22,3 +22,4 @@
   x <- !is.na(x) & x == 1
   return(x)
 }
+
