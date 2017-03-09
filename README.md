@@ -1,19 +1,23 @@
 # lsl2beta
 #### 20170308
 >(try6)</p>
+
 1. import初步建置
 
 #### 20170307
 >(try5)</p>
+
 1. 將ecm製作成function
 2  更新multi-groups的dml
 
 #### 20170306
 >(try5)</p>
+
 1. 更改變數名稱
 
 #### 20170303
 >(try4)</p>
+
 1. multi-groups在此架構可正確使用
 
 #### 20170224
