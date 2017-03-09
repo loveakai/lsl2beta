@@ -8,7 +8,7 @@
 >(try5)</p>
 
 1. 將ecm製作成function
-2  更新multi-groups的dml
+2. 更新multi-groups的dml
 
 #### 20170306
 >(try5)</p>
