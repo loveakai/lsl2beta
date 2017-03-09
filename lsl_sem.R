@@ -1,6 +1,6 @@
 rm(list=ls())
 set.seed=4869
-library(dplyr);library(gtools);library(magrittr)
+library(dplyr);library(gtools);library(magrittr);library(plyr)
 
 source('/Volumes/phaksie/Dropbox/lsl2_beta/lsl_tool.R')
 source('/Volumes/phaksie/Dropbox/lsl2_beta/lsl_functions.R')
@@ -122,52 +122,6 @@ pl <-penalize
 ecmm<-ecm(mat=mat,ide=ide,G_eta=G_eta,maxit=500,cri=10^(-5),penalize=pl)
 
 
-patterngen<-function(alpha_p,beta_p,phi_p,alpha,Beta,Phi,lambda,mat,scale=T){
-  #if (missing(lambda)&&missing(mat)) stop("lambda matrix must be specified")
-  if (missing(mat)) {mat<-matgen(alpha_p,beta_p,phi_p,alpha,Beta,Phi,lambda,mat,scale=T)}
-  pattern=list(
-  alpha_p_v = subset(mat$pattern$alpha_p,G_eta),
-  alpha_p_f = subset(mat$pattern$alpha_p,!G_eta),
-  beta_p_vv = subset(mat$pattern$beta_p,G_eta,G_eta),
-  beta_p_ff = subset(mat$pattern$beta_p,!G_eta,!G_eta),
-  beta_p_vf = subset(mat$pattern$beta_p,G_eta,!G_eta),
-  beta_p_fv = subset(mat$pattern$beta_p,!G_eta,G_eta),
-  phi_p_vv  = subset(mat$pattern$phi_p,G_eta,G_eta),
-  phi_p_ff  = subset(mat$pattern$phi_p,!G_eta,!G_eta),
-  phi_p_vf  = subset(mat$pattern$phi_p,G_eta,!G_eta),
-  phi_p_fv  = subset(mat$pattern$phi_p,!G_eta,G_eta)
-  )
-}
-
-import <-
-  function(raw_obs,var_subset,var_group,obs_subset,obs_weight,raw_cov,raw_mean,obs_size) {
-    if (missing(raw_obs)) {
-      return(list(raw_obs = raw_obs, raw_mean = raw_mean))
-    }  else {
-      if (missing(obs_subset)) {
-        obs_subset <- 1:nrow(dta)
-      }
-      if (missing(var_group)) {
-        if (missing(var_subset)) {
-          var_subset <- 1:ncol(raw_obs)
-        }
-        raw_obs %<>% .[obs_subset, ] %>% cbind(group = 1)
-      } else {
-        if (missing(var_subset)) {
-          var_subset <- (1:ncol(dta)) %>% .[!. %in% var_group]
-        }
-        raw_obs %<>% .[obs_subset, c(var_subset, var_group)]
-      }
-    }
-    return(list(
-      raw_cov = split(raw_obs, raw_obs[, var_group]) %>% lapply(function(x) {
-        cov(x[, -ncol(x)])
-      }),
-      raw_mean = split(raw_obs, raw_obs[, var_group]) %>% lapply(function(x) {
-        apply(x[, -ncol(x)], 2, mean)
-      })
-    ))
-  }
 
 specify <- function(pattern,value,difference){
   

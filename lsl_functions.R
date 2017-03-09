@@ -313,4 +313,41 @@ dml_cal   <- function(sigma=sigma,e_v=e_v,ini=ini,G_eta=G_eta,n_groups=n_groups,
                                                                                                     mu_v[[i_groups]]))
       })) %>% sum
   return(dml)
+}
+
+import <-
+  function(raw_obs,var_subset,var_group,obs_subset,obs_weight,raw_cov,raw_mean,obs_size) {
+    if (missing(raw_obs)) {
+      output<-list(raw_obs = raw_obs, raw_mean = raw_mean)
+      if (exists(obs_size)) {attr(output,"obs_size")<-obs_size}
+    }  else {
+      if (missing(obs_subset)) {
+        obs_subset <- 1:nrow(dta)
+      }
+      if (missing(var_group)) {
+        if (missing(var_subset)) {
+          var_subset <- 1:ncol(raw_obs)
+        }
+        raw_obs %<>% .[obs_subset, ] %>% cbind(group = 1)
+      } else {
+        if (is.character(var_group)) {
+          var_group <- which(colnames(raw_obs)%in%(var_group))
+        }
+        if (missing(var_subset)) {
+          var_subset <- (1:ncol(dta)) %>% .[!. %in% var_group]
+        }
+        raw_obs %<>% .[obs_subset, c(var_subset, var_group)]
+      }
+    output<-list(
+      raw_obs = raw_obs,
+      raw_cov = split(raw_obs, raw_obs[, var_group]) %>% lapply(function(x) {
+        cov(x[, -ncol(x)])
+      }),
+      raw_mean = split(raw_obs, raw_obs[, var_group]) %>% lapply(function(x) {
+        apply(x[, -ncol(x)], 2, mean)
+      })
+    )
+    attr(output,"obs_size")<- plyr::count(raw_obs[,var_group]) %>% .[,2]
+    }
+    return(output)
   }
