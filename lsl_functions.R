@@ -362,4 +362,11 @@ getpar    <-function(pattern,value,v_label,f_label,mat_label){
 }
 
 
-getpar(pattern=mat$pattern,value=list(mat$value$alpha_r,mat$value$beta_r,mat$value$phi_r),v_label=v_label,f_label=f_label,mat_label=mat_label)
+getpar(pattern = mat$pattern,value = list(mat$value$alpha_r,mat$value$beta_r,mat$value$phi_r),v_label = v_label,f_label = f_label,mat_label = mat_label)
+
+for(x in 1:2) {
+getpar(pattern = mat$pattern,value = list(mat$value$alpha_i[[x]],mat$value$beta_i[[x]],mat$value$phi_i[[x]]),v_label = v_label,f_label = f_label,mat_label = mat_label) %>% print
+}
+
+
+
