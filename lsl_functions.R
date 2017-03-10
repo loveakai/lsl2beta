@@ -297,7 +297,6 @@ ecm       <- function(mat=mat,ide=ide,G_eta=G_eta,maxit=500,cri=10^(-5),penalize
   
 }
 
-
 dml_cal   <- function(sigma=sigma,e_v=e_v,ini=ini,G_eta=G_eta,n_groups=n_groups,w_g=w_g){
   mu_v        <- lapply(1:n_groups, function(i_groups) subset(ini$mu_eta[[i_groups]],ini$G_eta))
   sigma_v     <- lapply(1:n_groups, function(i_groups) subset(ini$sigma_eta[[i_groups]],ini$G_eta,ini$G_eta))
@@ -322,19 +321,20 @@ import <-
       if (exists(obs_size)) {attr(output,"obs_size")<-obs_size}
     }  else {
       if (missing(obs_subset)) {
-        obs_subset <- 1:nrow(dta)
+        obs_subset <- 1:nrow(raw_obs)
       }
       if (missing(var_group)) {
         if (missing(var_subset)) {
           var_subset <- 1:ncol(raw_obs)
         }
         raw_obs %<>% .[obs_subset, ] %>% cbind(group = 1)
+        var_group <-ncol(raw_obs)
       } else {
         if (is.character(var_group)) {
           var_group <- which(colnames(raw_obs)%in%(var_group))
         }
         if (missing(var_subset)) {
-          var_subset <- (1:ncol(dta)) %>% .[!. %in% var_group]
+          var_subset <- (1:ncol(raw_obs)) %>% .[!. %in% var_group]
         }
         raw_obs %<>% .[obs_subset, c(var_subset, var_group)]
       }
@@ -362,11 +362,6 @@ getpar    <-function(pattern,value,v_label,f_label,mat_label){
 }
 
 
-getpar(pattern = mat$pattern,value = list(mat$value$alpha_r,mat$value$beta_r,mat$value$phi_r),v_label = v_label,f_label = f_label,mat_label = mat_label)
-
-for(x in 1:2) {
-getpar(pattern = mat$pattern,value = list(mat$value$alpha_i[[x]],mat$value$beta_i[[x]],mat$value$phi_i[[x]]),v_label = v_label,f_label = f_label,mat_label = mat_label) %>% print
-}
 
 
 

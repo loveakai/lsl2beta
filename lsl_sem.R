@@ -2,8 +2,8 @@ rm(list=ls())
 set.seed=4869
 library(dplyr);library(gtools);library(magrittr);library(plyr)
 
-source('/Volumes/phaksie/Dropbox/lsl2_beta/lsl_tool.R')
-source('/Volumes/phaksie/Dropbox/lsl2_beta/lsl_functions.R')
+source('./lsl_tool.R')
+source('./lsl_functions.R')
 
 model.cfa<-'
 F1=~0.8*x1+0.8*x2+0.8*x3
@@ -133,3 +133,14 @@ specify <- function(pattern,value,difference,ref_group,auto_scale=T,v_label,f_la
   fv_label <- paste0(f_label,"<-",rep(v_label,each=length(f_label)))
   mat_label<- sapply(c(v_label,f_label),function(x) paste0(c(v_label,f_label),"<-",x)) %>% `rownames<-`(c(v_label,f_label))
 }
+
+
+q<-getpar(pattern = mat$pattern,value = list(mat$value$alpha_r,mat$value$beta_r,mat$value$phi_r),v_label = v_label,f_label = f_label,mat_label = mat_label)
+
+lapply((1:n_groups),function(x){
+  return(
+    getpar(pattern = mat$pattern,value = list(mat$value$alpha_i[[x]],mat$value$beta_i[[x]],mat$value$phi_i[[x]]),v_label = v_label,f_label = f_label,mat_label = mat_label)
+    ) 
+}) %>% `names<-`(1:n_groups)
+
+lapply(q,melt) %>% lapply(.,function(x) cbind(.,rownames(x)))
