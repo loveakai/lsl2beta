@@ -7,28 +7,32 @@ betagen   <- function(lambda){
   
 }
 
-matgen    <- function(alpha_p,beta_p,phi_p,alpha_r,beta_r,phi_r,lambda,scale=T){ #**diminfo could be modified
+matgen    <- function(alpha_p,beta_p,phi_p,alpha_r,beta_r,phi_r,lambda,n_groups,scale=T){ #**diminfo could be modified
 
   #pattern matarices generation
   #only 3 matrices have pattern matrix, including alpha, beta, Phi
-  nm <- c(v_label,f_label)  
-  if (missing(alpha_p)) {   alpha_p <- c(rep(1,n_v),rep(0,n_f)) %>% `names<-`(nm) }
+  
+  n_v       <- nrow(lambda)
+  n_f       <- ncol(lambda)
+  n_eta     <- n_v + n_f
+  nm <- c(v_label,f_label)
+  
   if (missing(beta_p))  {
     if (missing(lambda)) { 
       stop("lambda matrix is not specified")
     } else { 
       beta_p                        <- betagen(lambda) 
     }
-    colnames(beta_p)                 <- nm
-    rownames(beta_p)                 <- nm 
   }
+  
+  if (missing(alpha_p)) {   alpha_p <- c(rep(1,n_v),rep(0,n_f)) }
+  
   if (missing(phi_p)) {
     phi_p                           <- matrix(diag(1,n_eta,n_eta), ncol = n_eta, nrow = n_eta)
     phi_p[(n_v+1):n_eta,(n_v+1):n_eta]  <- 1
-    colnames(phi_p)                 <- nm
-    rownames(phi_p)                 <- nm
   }
   
+
   #matrices generation
   ## reference component
   if (missing(alpha_r)) {
@@ -46,9 +50,10 @@ matgen    <- function(alpha_p,beta_p,phi_p,alpha_r,beta_r,phi_r,lambda,scale=T){
     phi_r <- diag(0,n_eta,n_eta)
     } else {
     phi_r <- phi_r
-  }
+    }
   
-  rownames(phi_r)   <- colnames(phi_r)   <- rownames(beta_r)  <- colnames(beta_r)  <-names(alpha_r)      <- nm
+  names(alpha_p)    <-colnames(beta_p)   <- rownames(beta_p)  <- colnames(phi_p)  <-rownames(phi_p)      <- nm
+  rownames(phi_r)   <- colnames(phi_r)   <- rownames(beta_r)  <- colnames(beta_r) <-names(alpha_r)      <- nm
 
   if (scale) {beta_p[apply(beta_p[(1:n_v),(n_v+1):n_eta] == 1, 2, function(x) min(which(x))) %>% cbind((n_v+1):n_eta)] <- 0}　
   
@@ -297,7 +302,6 @@ ecm       <- function(mat=mat,ide=ide,G_eta=G_eta,maxit=500,cri=10^(-5),penalize
   
 }
 
-
 dml_cal   <- function(sigma=sigma,e_v=e_v,ini=ini,G_eta=G_eta,n_groups=n_groups,w_g=w_g){
   mu_v        <- lapply(1:n_groups, function(i_groups) subset(ini$mu_eta[[i_groups]],ini$G_eta))
   sigma_v     <- lapply(1:n_groups, function(i_groups) subset(ini$sigma_eta[[i_groups]],ini$G_eta,ini$G_eta))
@@ -322,23 +326,24 @@ import <-
       if (exists(obs_size)) {attr(output,"obs_size")<-obs_size}
     }  else {
       if (missing(obs_subset)) {
-        obs_subset <- 1:nrow(dta)
+        obs_subset <- 1:nrow(raw_obs)
       }
       if (missing(var_group)) {
         if (missing(var_subset)) {
           var_subset <- 1:ncol(raw_obs)
         }
         raw_obs %<>% .[obs_subset, ] %>% cbind(group = 1)
+        var_group <-ncol(raw_obs)
       } else {
         if (is.character(var_group)) {
           var_group <- which(colnames(raw_obs)%in%(var_group))
         }
         if (missing(var_subset)) {
-          var_subset <- (1:ncol(dta)) %>% .[!. %in% var_group]
+          var_subset <- (1:ncol(raw_obs)) %>% .[!. %in% var_group]
         }
         raw_obs %<>% .[obs_subset, c(var_subset, var_group)]
       }
-    output<-list(
+    output<-list(ㄋ
       raw_obs = raw_obs,
       raw_cov = split(raw_obs, raw_obs[, var_group]) %>% lapply(function(x) {
         cov(x[, -ncol(x)])
@@ -348,6 +353,7 @@ import <-
       })
     )
     attr(output,"obs_size")<- plyr::count(raw_obs[,var_group]) %>% .[,2]
+    attr(output,"var_group")<-output$raw_cov %>% length
     }
     return(output)
   }
@@ -362,11 +368,6 @@ getpar    <-function(pattern,value,v_label,f_label,mat_label){
 }
 
 
-getpar(pattern = mat$pattern,value = list(mat$value$alpha_r,mat$value$beta_r,mat$value$phi_r),v_label = v_label,f_label = f_label,mat_label = mat_label)
-
-for(x in 1:2) {
-getpar(pattern = mat$pattern,value = list(mat$value$alpha_i[[x]],mat$value$beta_i[[x]],mat$value$phi_i[[x]]),v_label = v_label,f_label = f_label,mat_label = mat_label) %>% print
-}
 
 
 
