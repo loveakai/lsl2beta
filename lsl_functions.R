@@ -31,10 +31,13 @@ import <-
           apply(x[, -ncol(x)], 2, mean)
         })
       )
-      attr(output,"obs_size")  <- plyr::count(raw_obs[,var_group]) %>% .[,2]
+      attr(output,"obs_size")  <- plyr::count(raw_obs[,ncol(raw_obs)]) %>% .[,2]
       
     }
     attr(output,"var_group") <- output$raw_cov %>% length
+    if (!is.null(colnames(output$raw_cov[[1]]))) {
+      attr(output,"v_names")<-colnames(output$raw_cov[[1]])
+      }
     return(output)
   }
 
