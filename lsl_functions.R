@@ -4,6 +4,9 @@ import <-
       output<-list(raw_obs = raw_obs, raw_mean = raw_mean)
       if (exists(obs_size)) {attr(output,"obs_size")<-obs_size}
     }  else {
+      if (!is.data.frame(raw_obs)) {
+        as.data.frame(raw_obs)
+        }
       if (missing(obs_subset)) {
         obs_subset <- 1:nrow(raw_obs)
       }
@@ -11,7 +14,9 @@ import <-
         if (missing(var_subset)) {
           var_subset <- 1:ncol(raw_obs)
         }
-        raw_obs %<>% .[obs_subset, ] %>% cbind(group = 1)
+        raw_obs %<>% .[obs_subset, ] 
+        if (is.null(colnames(raw_obs))) colnames(raw_obs)<-paste0("v",1:ncol(raw_obs))
+        raw_obs %<>% cbind(group=1)
         var_group <-ncol(raw_obs)
       } else {
         if (is.character(var_group)) {
@@ -20,7 +25,9 @@ import <-
         if (missing(var_subset)) {
           var_subset <- (1:ncol(raw_obs)) %>% .[!. %in% var_group]
         }
-        raw_obs %<>% .[obs_subset, c(var_subset, var_group)]
+        raw_o   <- raw_obs[obs_subset,var_subset]
+        if (is.null(colnames(raw_o))) colnames(raw_o)<-paste0("v",1:ncol(raw_o))
+        raw_obs <- cbind(raw_o,raw_obs[,var_group])
       }
       output<-list(
         raw_obs = raw_obs,
@@ -36,11 +43,10 @@ import <-
     }
     attr(output,"var_group") <- output$raw_cov %>% length
     if (!is.null(colnames(output$raw_cov[[1]]))) {
-      attr(output,"v_names")<-colnames(output$raw_cov[[1]])
+      attr(output,"v_label")<-colnames(output$raw_cov[[1]])
       }
     return(output)
   }
-
 
 
 betagen   <- function(lambda){

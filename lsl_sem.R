@@ -89,21 +89,6 @@ e_v       <- lapply(1:n_groups, function(i_groups) sapply(dta[[i_groups]],mean)[
 beta_vf <- matrix(NA, 9, 3)
 beta_vf[c(1,2,3), 1] <- beta_vf[c(4,5,6), 2] <- beta_vf[c(7,8,9), 3] <- 1
 
-# beta_p    <- matrix(0, ncol = n_eta, nrow = n_eta) %>% `colnames<-`(nm) %>% `rownames<-`(nm)
-# beta_p[c(1,2,3), 10] <- beta_p[c(4,5,6), 11] <- beta_p[c(7,8,9), 12] <- 1  
-# Beta      <- Beta <- 0.8*.is_one(beta_p) #starting value of Beta
-# Beta[c(2,3), 10] <- Beta[c(5,6), 11] <- Beta[c(8,9), 12] <- 1  
-
-#phi_p     <- matrix(0,n_eta,n_eta)
-#phi_p[c(11,12),10] <- phi_p[c(10,12),11] <- phi_p[c(10,11),12] <- NA
-# Phi       <- matrix(0,n_eta,n_eta)
-# Phi[(n_v+1):n_eta,(n_v+1):n_eta] <- 0.4
-# diag(Phi) <- 1-0.8^2
-# Phi[10,10]<-Phi[11,11]<-Phi[12,12]<-1
-
-#mat       <- matgen(lambda=lambda,Beta = Beta,scale=T)
-
-
 eta       <- vector(mode = "numeric",n_eta)   %>%`names<-`(nm)
 zeta      <- vector(mode = "numeric",n_eta)   %>%`names<-`(nm)
 ide       <- diag(1, ncol = n_eta, nrow = n_eta)  %>% `colnames<-`(nm) %>% `rownames<-`(nm) 
