@@ -104,8 +104,6 @@ pl <-penalize
 
 ecmm<-ecm(mat=mat,ide=ide,G_eta=G_eta,maxit=500,cri=10^(-5),penalize=pl)
 
-
-
 specify <- function(pattern,value,difference,ref_group,auto_scale=T,v_label,f_label){
   
   if (!exists("beta_vf",pattern)) stop("beta_vf must be specified")

@@ -1,8 +1,11 @@
-import <-
-  function(raw_obs,var_subset,var_group,obs_subset,obs_weight,raw_cov,raw_mean,obs_size) {
+import <-   function(raw_obs,var_subset,var_group,obs_subset,obs_weight,raw_cov,raw_mean,obs_size) {
     if (missing(raw_obs)) {
-      output<-list(raw_obs = raw_obs, raw_mean = raw_mean)
-      if (exists(obs_size)) {attr(output,"obs_size")<-obs_size}
+      if (is.list(raw_cov)) {
+      output<-list(raw_cov = raw_cov, raw_mean = raw_mean)
+      } else {
+        output<-list(raw_cov = list(raw_cov),raw_mean=list(raw_mean))
+      }
+      if (!missing(obs_size)) {attr(output,"obs_size")<-obs_size}
     }  else {
       if (!is.data.frame(raw_obs)) {
         as.data.frame(raw_obs)
