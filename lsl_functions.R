@@ -51,8 +51,7 @@ import <-   function(raw_obs,var_subset,var_group,obs_subset,obs_weight,raw_cov,
     return(output)
   }
 
-
-betagen   <- function(lambda){
+betagen   <- function(lambda,n_v,n_eta){
   
   beta_p                          <- matrix(0, ncol = n_eta, nrow = n_eta)
   beta_p[(1:n_v),(n_v+1):n_eta]   <- lambda
@@ -61,7 +60,7 @@ betagen   <- function(lambda){
   
 }
 
-matgen    <- function(alpha_p,beta_p,phi_p,alpha_r,beta_r,phi_r,lambda,n_groups,scale=T){ #**diminfo could be modified
+matgen    <- function(alpha_p,beta_p,phi_p,alpha_r,beta_r,phi_r,lambda,n_groups,scale=T,labels){ #**diminfo could be modified
 
   #pattern matarices generation
   #only 3 matrices have pattern matrix, including alpha, beta, Phi
@@ -69,13 +68,13 @@ matgen    <- function(alpha_p,beta_p,phi_p,alpha_r,beta_r,phi_r,lambda,n_groups,
   n_v       <- nrow(lambda)
   n_f       <- ncol(lambda)
   n_eta     <- n_v + n_f
-  nm <- c(v_label,f_label)
+  nm        <- c(labels$v_label,labels$f_label)
   
   if (missing(beta_p))  {
     if (missing(lambda)) { 
       stop("lambda matrix is not specified")
     } else { 
-      beta_p                        <- betagen(lambda) 
+      beta_p                        <- betagen(lambda,n_v,n_eta) 
     }
   }
   

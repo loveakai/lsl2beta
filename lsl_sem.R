@@ -76,7 +76,7 @@ F2~~0.4*F3
 # dta[[3]]  <- lavaan::simulateData(model.cfa3,sample.nobs = 1000L) %>% cbind(group=as.factor(3))
 # dta       <- do.call(rbind,dta)
 
-dta       <- lavaan::HolzingerSwineford1939[7:15]
+
 
 n_groups  <- length(dta)
 
@@ -86,8 +86,6 @@ sigma     <- lapply(1:n_groups, function(i_groups) {dta[[i_groups]] %>% as.matri
 e_v       <- lapply(1:n_groups, function(i_groups) sapply(dta[[i_groups]],mean)[1:n_v] %>% `names<-`(nm[1:n_v]))
 
 
-beta_vf <- matrix(NA, 9, 3)
-beta_vf[c(1,2,3), 1] <- beta_vf[c(4,5,6), 2] <- beta_vf[c(7,8,9), 3] <- 1
 
 eta       <- vector(mode = "numeric",n_eta)   %>%`names<-`(nm)
 zeta      <- vector(mode = "numeric",n_eta)   %>%`names<-`(nm)
@@ -107,13 +105,16 @@ ecmm<-ecm(mat=mat,ide=ide,G_eta=G_eta,maxit=500,cri=10^(-5),penalize=pl)
 specify <- function(pattern,value,difference,ref_group,auto_scale=T,v_label,f_label){
   
   if (!exists("beta_vf",pattern)) stop("beta_vf must be specified")
-  if (!(is.list(pattern)&is.list(value)&is.list(difference))) stop("arguments must be lists")
-  if (missing(v_label)) {v_label<-paste0("v",1:nrow(pattern$beta_vf))}
+  #if (!(is.list(pattern)&is.list(value)&is.list(difference))) stop("arguments must be lists")
+  if (missing(v_label)) {v_label<-attributes(data)$v_label}
   if (missing(f_label)) {f_label<-paste0("f",1:ncol(pattern$beta_vf))}
-  vf_label <- paste0(v_label,"<-",rep(f_label,each=length(v_label)))
-  fv_label <- paste0(f_label,"<-",rep(v_label,each=length(f_label)))
-  mat_label<- sapply(c(v_label,f_label),function(x) paste0(c(v_label,f_label),"<-",x)) %>% `rownames<-`(c(v_label,f_label))
-}
+  vf_label <- paste0(v_label,"<-",rep(f_label,each=length(v_label))) 
+  fv_label <- paste0(f_label,"<-",rep(v_label,each=length(f_label))) 
+  mat_label<- sapply(c(v_label,f_label),function(x) paste0(c(v_label,f_label),"<-",x)) %>% `rownames<-`(c(v_label,f_label)) 
+  labels   <- list(v_label,f_label,vf_label,fv_label,mat_label)
+  return(matgen(lambda=pattern$beta_vf,labels=labels))
+
+  }
 
 
 q<-getpar(pattern = mat$pattern,value = list(mat$value$alpha_r,mat$value$beta_r,mat$value$phi_r),v_label = v_label,f_label = f_label,mat_label = mat_label)
@@ -125,4 +126,14 @@ lapply((1:n_groups),function(x){
 }) %>% `names<-`(1:n_groups)
 
 lapply(q,melt) %>% lapply(.,function(x) cbind(.,rownames(x)))
+
+
+
+dta       <- lavaan::HolzingerSwineford1939[7:15]
+data      <- import(dta)
+
+beta_vf <- matrix(NA, 9, 3)
+beta_vf[c(1,2,3), 1] <- beta_vf[c(4,5,6), 2] <- beta_vf[c(7,8,9), 3] <- 1
+pattern<-list()
+pattern$beta_vf<-beta_vf
 
