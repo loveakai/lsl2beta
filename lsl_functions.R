@@ -1,4 +1,4 @@
-import <-   function(raw_obs,var_subset,var_group,obs_subset,obs_weight,raw_cov,raw_mean,obs_size) {
+import    <- function(raw_obs,var_subset,var_group,obs_subset,obs_weight,raw_cov,raw_mean,obs_size) {
     if (missing(raw_obs)) {
       if (is.list(raw_cov)) {
       output<-list(raw_cov = raw_cov, raw_mean = raw_mean)
@@ -44,7 +44,7 @@ import <-   function(raw_obs,var_subset,var_group,obs_subset,obs_weight,raw_cov,
       attr(output,"obs_size")  <- plyr::count(raw_obs[,ncol(raw_obs)]) %>% .[,2]
       
     }
-    attr(output,"var_group") <- output$raw_cov %>% length
+    attr(output,"n_groups") <- output$raw_cov %>% length
     if (!is.null(colnames(output$raw_cov[[1]]))) {
       attr(output,"v_label")<-colnames(output$raw_cov[[1]])
       }
@@ -55,7 +55,6 @@ betagen   <- function(lambda,n_v,n_eta){
   
   beta_p                          <- matrix(0, ncol = n_eta, nrow = n_eta)
   beta_p[(1:n_v),(n_v+1):n_eta]   <- lambda
-  #beta_p[(n_v+1):n_eta,(n_v+1):n_eta] <- diag(1,n_f,n_f)
   return(beta_p)
   
 }
@@ -120,6 +119,16 @@ matgen    <- function(alpha_p,beta_p,phi_p,alpha_r,beta_r,phi_r,lambda,n_groups,
   
   return(list(pattern=list(alpha_p=alpha_p,beta_p=beta_p,phi_p=phi_p),value=list(alpha_r=alpha_r,beta_r=beta_r,phi_r=phi_r,alpha_i=alpha_i,beta_i=beta_i,phi_i=phi_i)))
   
+}
+
+getpar    <- function(pattern,value,v_label,f_label,mat_label){
+  mapply(function(val,pat, p,v,nm) {
+    rbind(val[p|v],pat[p|v]) %>% `colnames<-`(nm[p|v]) %>% `rownames<-`(c("value","pattern"))},
+    val=value,
+    pat=pattern,
+    p=lapply(pattern,.is_est),
+    v=lapply(value,function(x) {x!=0}),
+    nm=list(c(v_label,f_label),mat_label,mat_label)) %>% `names<-`(c("alpha","beta","gamma"))
 }
 
 threshold <- function(theta,gma){
@@ -372,16 +381,7 @@ dml_cal   <- function(sigma=sigma,e_v=e_v,ini=ini,G_eta=G_eta,n_groups=n_groups,
   return(dml)
 }
 
-
-  
-getpar    <-function(pattern,value,v_label,f_label,mat_label){
- mapply(function(val,p,v,nm) {
-    val[p|v] %>% `names<-`(nm[p|v])},
-    val=value,
-    p=lapply(pattern,.is_est),
-    v=lapply(value,function(x) {x!=0}),
-    nm=list(c(v_label,f_label),mat_label,mat_label)) %>% `names<-`(c("alpha","beta","gamma"))
-}
+ 
 
 
 

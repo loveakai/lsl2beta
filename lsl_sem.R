@@ -1,6 +1,6 @@
 rm(list=ls())
 set.seed=4869
-library(dplyr);library(gtools);library(magrittr);library(plyr)
+library(dplyr);library(gtools);library(magrittr);library(plyr);library(reshape2)
 
 source('./lsl_tool.R')
 source('./lsl_functions.R')
@@ -112,20 +112,26 @@ specify <- function(pattern,value,difference,ref_group,auto_scale=T,v_label,f_la
   fv_label <- paste0(f_label,"<-",rep(v_label,each=length(f_label))) 
   mat_label<- sapply(c(v_label,f_label),function(x) paste0(c(v_label,f_label),"<-",x)) %>% `rownames<-`(c(v_label,f_label)) 
   labels   <- list(v_label,f_label,vf_label,fv_label,mat_label)
-  return(matgen(lambda=pattern$beta_vf,labels=labels))
-
+  
+  mat      <- matgen(lambda=pattern$beta_vf,labels=labels)
+  q        <- getpar(pattern = mat$pattern,value = list(mat$value$alpha_r,mat$value$beta_r,mat$value$phi_r),v_label,f_label,mat_label) %>%
+    lapply(.,t) %>% 
+    mapply(function(x,y) {cbind(x,name=rownames(x),matrix=y)},x=.,y=c("alpha","beta","gamma"),SIMPLIFY = F)
+  
+  lapply((1:attributes(data)$n_groups),function(x){
+    return(
+      getpar(pattern = mat$pattern,value = list(mat$value$alpha_i[[x]],mat$value$beta_i[[x]],mat$value$phi_i[[x]]),v_label,f_label,mat_label)
+    ) 
+  }) %>% `names<-`(1:attributes(data)$n_groups) %>% 
+    lapply(.,reshape2::melt) %>% 
+    mapply(function(x,y) {cbind(x,name=rownames(x),matrix=y)},x=.,y=c("alpha","beta","gamma"),SIMPLIFY = F)
+  return(q)
   }
 
 
-q<-getpar(pattern = mat$pattern,value = list(mat$value$alpha_r,mat$value$beta_r,mat$value$phi_r),v_label = v_label,f_label = f_label,mat_label = mat_label)
 
-lapply((1:n_groups),function(x){
-  return(
-    getpar(pattern = mat$pattern,value = list(mat$value$alpha_i[[x]],mat$value$beta_i[[x]],mat$value$phi_i[[x]]),v_label = v_label,f_label = f_label,mat_label = mat_label)
-    ) 
-}) %>% `names<-`(1:n_groups)
 
-lapply(q,melt) %>% lapply(.,function(x) cbind(.,rownames(x)))
+
 
 
 
