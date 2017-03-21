@@ -70,11 +70,11 @@ F1~~0.4*F3
 F2~~0.4*F3
 '
 
-# dta       <-list()
-# dta[[1]]  <- lavaan::simulateData(model.cfa,sample.nobs = 1000L)  %>% cbind(group=as.factor(1))#%>% cbind(.,sample(c(1,2),size=nrow(.),rep=T))
-# dta[[2]]  <- lavaan::simulateData(model.cfa2,sample.nobs = 1000L) %>% cbind(group=as.factor(2))
-# dta[[3]]  <- lavaan::simulateData(model.cfa3,sample.nobs = 1000L) %>% cbind(group=as.factor(3))
-# dta       <- do.call(rbind,dta)
+ dta       <-list()
+ dta[[1]]  <- lavaan::simulateData(model.cfa,sample.nobs = 20L)  %>% cbind(group=as.factor(1))#%>% cbind(.,sample(c(1,2),size=nrow(.),rep=T))
+ dta[[2]]  <- lavaan::simulateData(model.cfa2,sample.nobs = 20L) %>% cbind(group=as.factor(2))
+ dta[[3]]  <- lavaan::simulateData(model.cfa3,sample.nobs = 20L) %>% cbind(group=as.factor(3))
+ dta       <- do.call(rbind,dta)
 
 
 
@@ -113,18 +113,13 @@ specify <- function(pattern,value,difference,ref_group,auto_scale=T,v_label,f_la
   mat_label<- sapply(c(v_label,f_label),function(x) paste0(c(v_label,f_label),"<-",x)) %>% `rownames<-`(c(v_label,f_label)) 
   labels   <- list(v_label,f_label,vf_label,fv_label,mat_label)
   
-  mat      <- matgen(lambda=pattern$beta_vf,labels=labels)
-  q        <- getpar(pattern = mat$pattern,value = list(mat$value$alpha_r,mat$value$beta_r,mat$value$phi_r),v_label,f_label,mat_label) %>%
-    lapply(.,t) %>% 
-    mapply(function(x,y) {cbind(x,name=rownames(x),matrix=y)},x=.,y=c("alpha","beta","gamma"),SIMPLIFY = F)
-  
-  lapply((1:attributes(data)$n_groups),function(x){
-    return(
-      getpar(pattern = mat$pattern,value = list(mat$value$alpha_i[[x]],mat$value$beta_i[[x]],mat$value$phi_i[[x]]),v_label,f_label,mat_label)
-    ) 
-  }) %>% `names<-`(1:attributes(data)$n_groups) %>% 
-    lapply(.,reshape2::melt) %>% 
-    mapply(function(x,y) {cbind(x,name=rownames(x),matrix=y)},x=.,y=c("alpha","beta","gamma"),SIMPLIFY = F)
+  mat      <- matgen(lambda=pattern$beta_vf,n_groups = attributes(data)$n_groups,labels=labels)
+  ref      <- getpar(pattern = mat$pattern,value = list(mat$value$alpha_r,mat$value$beta_r,mat$value$phi_r),v_label,f_label,mat_label,group="r") 
+
+  inc      <- lapply((1:attributes(data)$n_groups),function(x){
+      getpar(pattern = mat$pattern, value = list(mat$value$alpha_i[[x]],mat$value$beta_i[[x]],mat$value$phi_i[[x]]),v_label,f_label,mat_label,group=x)
+  }) %>% `names<-`(1:attributes(data)$n_groups)
+    
   return(q)
   }
 
@@ -136,7 +131,7 @@ specify <- function(pattern,value,difference,ref_group,auto_scale=T,v_label,f_la
 
 
 dta       <- lavaan::HolzingerSwineford1939[7:15]
-data      <- import(dta)
+data      <- import(dta,var_group="group")
 
 beta_vf <- matrix(NA, 9, 3)
 beta_vf[c(1,2,3), 1] <- beta_vf[c(4,5,6), 2] <- beta_vf[c(7,8,9), 3] <- 1

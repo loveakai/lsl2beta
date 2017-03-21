@@ -105,8 +105,8 @@ matgen    <- function(alpha_p,beta_p,phi_p,alpha_r,beta_r,phi_r,lambda,n_groups,
     }
   
   names(alpha_p)    <-colnames(beta_p)   <- rownames(beta_p)  <- colnames(phi_p)  <-rownames(phi_p)      <- nm
-  rownames(phi_r)   <- colnames(phi_r)   <- rownames(beta_r)  <- colnames(beta_r) <-names(alpha_r)      <- nm
-
+  rownames(phi_r)   <- colnames(phi_r)   <- rownames(beta_r)  <- colnames(beta_r) <-names(alpha_r)       <- nm
+ 
   if (scale) {beta_p[apply(beta_p[(1:n_v),(n_v+1):n_eta] == 1, 2, function(x) min(which(x))) %>% cbind((n_v+1):n_eta)] <- 0}　
   
   ## increment component
@@ -121,14 +121,19 @@ matgen    <- function(alpha_p,beta_p,phi_p,alpha_r,beta_r,phi_r,lambda,n_groups,
   
 }
 
-getpar    <- function(pattern,value,v_label,f_label,mat_label){
-  mapply(function(val,pat, p,v,nm) {
-    rbind(val[p|v],pat[p|v]) %>% `colnames<-`(nm[p|v]) %>% `rownames<-`(c("value","pattern"))},
-    val=value,
-    pat=pattern,
-    p=lapply(pattern,.is_est),
-    v=lapply(value,function(x) {x!=0}),
-    nm=list(c(v_label,f_label),mat_label,mat_label)) %>% `names<-`(c("alpha","beta","gamma"))
+getpar    <- function(pattern,value,v_label,f_label,mat_label,group){
+  mapply(function(ma,val,pat,p,v,co,ro,nm) {
+    rbind(nm[p|v],ma,group,ro[p|v],co[p|v],pat[p|v],val[p|v]) %>% 
+      `rownames<-`(c("name","matrix","group","row","col","type","initial"))},
+    val=lapply(value,as.matrix),
+    pat=lapply(pattern,as.matrix),
+    p=lapply(pattern,function(x) {as.matrix(x) %>% .is_est}),
+    v=lapply(value,function(x) {as.matrix(x)!=0}),
+    co=lapply(pattern,function(x) {as.matrix(x) %>% col}),
+    ro=lapply(pattern,function(x) {as.matrix(x) %>% row}),
+    nm=list(c(v_label,f_label),mat_label,mat_label) %>% lapply(as.matrix),
+    ma=list("alpha","beta","phi")) %>% 
+    `names<-`(c("alpha","beta","phi")) %>% lapply(.,t)
 }
 
 threshold <- function(theta,gma){
