@@ -52,54 +52,92 @@ import    <- function(raw_obs,var_subset,var_group,obs_subset,obs_weight,raw_cov
     return(output)
   }
 
-matgen    <- function(alpha_p,beta_p,phi_p,alpha_r,beta_r,phi_r,lambda,n_groups,scale,labels,ref_group){ #**diminfo could be modified
+matgen    <- function(pattern,value,n_groups,scale,labels,ref_group){ #**diminfo could be modified
 
   #pattern matarices generation
   #only 3 matrices have pattern matrix, including alpha, beta, Phi
   
-  n_v       <- nrow(lambda)
-  n_f       <- ncol(lambda)
+  n_v       <- nrow(pattern$beta_vf)
+  n_f       <- ncol(pattern$beta_vf)
   n_eta     <- n_v + n_f
   nm        <- c(labels$v_label,labels$f_label)
+  nm_g      <- attributes(data)$g_label[c(ref_group,(1:attributes(data)$n_groups)[-ref_group])]
   
-  if (missing(beta_p))  {
-    if (missing(lambda)) { 
-      stop("lambda matrix is not specified")
-    } else { 
-      beta_p                          <- matrix(0, ncol = n_eta, nrow = n_eta)
-      beta_p[(1:n_v),(n_v+1):n_eta]   <- lambda 
-    }
+  beta_p                          <- matrix(0, ncol = n_eta, nrow = n_eta)
+  beta_p[(1:n_v),(n_v+1):n_eta]   <- pattern$beta_vf
+  if(exists("beta_ff",pattern)){
+    beta_p[(n_v+1):n_eta,(n_v+1):n_eta]  <- pattern$beta_ff
+  }
+  if(exists("beta_vv",pattern)){
+    beta_p[(1:n_v),(1:n_v)]              <- pattern$beta_vv
+  }
+  if(exists("beta_fv",pattern)){
+    beta_p[(n_v+1):n_eta,(1:n_v)]        <- pattern$beta_fv
+  }
+
+  alpha_p                                <- c(rep(1,n_v),rep(0,n_f))
+  if(exists("alpha_v",pattern)){
+    alpha_p[1:n_v]                       <- pattern$alpha_v
+  }
+  if(exists("alpha_f",pattern)){
+    alpha_p[(n_v+1):n_eta]               <- pattern$alpha_f
   }
   
-  if (missing(alpha_p)) {   alpha_p <- c(rep(1,n_v),rep(0,n_f)) }
-  
-  if (missing(phi_p)) {
-    phi_p                           <- matrix(diag(1,n_eta,n_eta), ncol = n_eta, nrow = n_eta)
-    phi_p[(n_v+1):n_eta,(n_v+1):n_eta]  <- 1
+  phi_p                                  <- matrix(diag(1,n_eta,n_eta), ncol = n_eta, nrow = n_eta)
+  phi_p[(n_v+1):n_eta,(n_v+1):n_eta]     <- 1
+  if(exists("phi_ff",pattern)){
+    phi_p[(n_v+1):n_eta,(n_v+1):n_eta]   <- pattern$phi_ff
   }
-  
+  if(exists("phi_vv",pattern)){
+    phi_p[(1:n_v),(1:n_v)]               <- pattern$phi_vv
+  }
+
 
   #matrices generation
   ## reference component
-  if (missing(alpha_r)) {
-    alpha_r <- c(rep(0.01,n_v),rep(0,n_f))
+  if(missing(value)){
+  alpha_r <- c(rep(0.01,n_v),rep(0,n_f))
+  beta_r  <- 1 *.is_one(beta_p)
+  phi_r   <- diag(0,n_eta,n_eta)
   } else {
-    alpha_r<-alpha_r }
-  
-  if (missing(beta_r))  {
-    beta_r  <- 0.8 *.is_one(beta_p)
-  } else {
-    beta_r <-beta_r} 
-  
-  if (missing(phi_r))   {
-    #phi_r   <- matrix(diag(c(rep(0.1,n_v,n_v),rep(1,n_f,n_f))), ncol = n_eta, nrow = n_eta)
-    phi_r <- diag(0,n_eta,n_eta)
-    } else {
-    phi_r <- phi_r
+    
+    alpha_r                                <- c(rep(0.01,n_v),rep(0,n_f))
+    if(exists("alpha_v",value)){
+      alpha_r[1:n_v]                       <- value$alpha_v
     }
+    if(exists("alpha_f",value)){
+      alpha_r[(n_v+1):n_eta]               <- value$alpha_f
+    }
+    
+    beta_r  <- 1 *.is_one(beta_p)
+    if(exists("beta_vf")){
+      beta_r[(1:n_v),(n_v+1):n_eta]        <- value$beta_vf
+    }
+    if(exists("beta_ff",value)){
+      beta_r[(n_v+1):n_eta,(n_v+1):n_eta]  <- value$beta_ff
+    }
+    if(exists("beta_vv",value)){
+      beta_r[(1:n_v),(1:n_v)]              <- value$beta_vv
+    }
+    if(exists("beta_fv",value)){
+      beta_r[(n_v+1):n_eta,(1:n_v)]        <- value$beta_fv
+    }
+    
+    
+    
+    phi_r                                  <- diag(0,n_eta,n_eta)
+    phi_r[(n_v+1):n_eta,(n_v+1):n_eta]     <- 1
+    if(exists("phi_ff",value)){
+      phi_r[(n_v+1):n_eta,(n_v+1):n_eta]   <- value$phi_ff
+    }
+    if(exists("phi_vv",value)){
+      phi_r[(1:n_v),(1:n_v)]               <- value$phi_vv
+    }
+  }
+  
   
   names(alpha_p)    <-colnames(beta_p)   <- rownames(beta_p)  <- colnames(phi_p)  <-rownames(phi_p)      <- nm
-  rownames(phi_r)   <- colnames(phi_r)   <- rownames(beta_r)  <- colnames(beta_r) <-names(alpha_r)       <- nm
+  rownames(phi_r)   <-colnames(phi_r)    <- rownames(beta_r)  <- colnames(beta_r) <-names(alpha_r)       <- nm
  
   if (scale) {beta_p[apply(beta_p[(1:n_v),(n_v+1):n_eta] == 1, 2, function(x) min(which(x))) %>% cbind((n_v+1):n_eta)] <- 0}　
   
@@ -110,6 +148,8 @@ matgen    <- function(alpha_p,beta_p,phi_p,alpha_r,beta_r,phi_r,lambda,n_groups,
   g<-0.1*diag(ncol(phi_r))
   g[(n_v+1):n_eta,(n_v+1):n_eta]<-(diag(n_f))
   phi_i  <-rep(list(g %>%`colnames<-`(nm) %>% `rownames<-`(nm)),n_groups) 
+  
+  names(alpha_i)    <-names(beta_i)      <-names(phi_i)       <-nm_g
   
   return(list(pattern=list(alpha_p=alpha_p,beta_p=beta_p,phi_p=phi_p),value=list(alpha_r=alpha_r,beta_r=beta_r,phi_r=phi_r,alpha_i=alpha_i,beta_i=beta_i,phi_i=phi_i)))
   
@@ -130,22 +170,23 @@ getpar    <- function(pattern,value,v_label,f_label,mat_label,group){
     `names<-`(c("alpha","beta","phi")) %>% lapply(.,t)
 }
 
-specify <- function(pattern,value,difference,ref_group,auto_scale=T,v_label,f_label){
+specify   <- function(pattern,value,difference,ref_group,auto_scale=T,v_label,f_label){
   
   if (!exists("beta_vf",pattern)) stop("beta_vf must be specified")
   #if (!(is.list(pattern)&is.list(value)&is.list(difference))) stop("arguments must be lists")
   if (missing(v_label)) {v_label<-attributes(data)$v_label}
   if (missing(f_label)) {f_label<-paste0("f",1:ncol(pattern$beta_vf))}
   if (missing(ref_group)) {ref_group<-1L}
+  if (is.character(ref_group)) {ref_group<-which(attributes(data)$g_label==ref_group)}
   vf_label <- paste0(v_label,"<-",rep(f_label,each=length(v_label)))
   fv_label <- paste0(f_label,"<-",rep(v_label,each=length(f_label)))
   mat_label<- sapply(c(v_label,f_label),function(x) paste0(c(v_label,f_label),"<-",x)) %>% `rownames<-`(c(v_label,f_label))
   labels   <- list(v_label,f_label,vf_label,fv_label,mat_label)
   
-  mat      <- matgen(lambda=pattern$beta_vf,n_groups = attributes(data)$n_groups,labels=labels,scale=auto_scale,ref_group=ref_group)
+  mat      <- matgen(pattern,value,n_groups = attributes(data)$n_groups,labels=labels,scale=auto_scale,ref_group=ref_group)
   ref      <- getpar(pattern = mat$pattern,value = list(mat$value$alpha_r,mat$value$beta_r,mat$value$phi_r),v_label,f_label,mat_label,group="r") %>% do.call(rbind,.)
   inc      <- lapply((1:attributes(data)$n_groups),function(x){
-    getpar(pattern = mat$pattern, value = list(mat$value$alpha_i[[x]],mat$value$beta_i[[x]],mat$value$phi_i[[x]]),v_label,f_label,mat_label,group=x) %>% do.call(rbind,.)
+    getpar(pattern = mat$pattern, value = list(mat$value$alpha_i[[x]],mat$value$beta_i[[x]],mat$value$phi_i[[x]]),v_label,f_label,mat_label,group=names(mat$value$alpha_i[x])) %>% do.call(rbind,.)
   } ) %>% do.call(rbind,.) %>% rbind(ref,.) %>% as.data.frame
   output   <- within(inc,{
     col    <-as.numeric(levels(col)[col])

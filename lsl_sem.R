@@ -108,9 +108,14 @@ data      <- import(dta,var_group = 10)
 
 beta_vf <- matrix(NA, 9, 3)
 beta_vf[c(1,2,3), 1] <- beta_vf[c(4,5,6), 2] <- beta_vf[c(7,8,9), 3] <- 1
-pattern<-list()
+pattern <-list()
 pattern$beta_vf<-beta_vf
-model     <- specify(pattern)
+beta_vf <- matrix(0,9,3)
+beta_vf[c(2,3),1]    <- beta_vf[c(5,6),2]    <- beta_vf[c(8,9),3]    <- 1
+beta_vf[1,1]         <- beta_vf[4,2]         <- beta_vf[7,3]         <- 0.8
+value <-list()
+value$beta_vf<-beta_vf
+model     <- specify(pattern,value,ref_group="g3")
 
 
 learn <- function(penalty,lambda,delta,control=list(max_iter,rel_tol)){
