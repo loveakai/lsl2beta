@@ -136,6 +136,31 @@ getpar    <- function(pattern,value,v_label,f_label,mat_label,group){
     `names<-`(c("alpha","beta","phi")) %>% lapply(.,t)
 }
 
+specify <- function(pattern,value,difference,ref_group,auto_scale=T,v_label,f_label){
+  
+  if (!exists("beta_vf",pattern)) stop("beta_vf must be specified")
+  #if (!(is.list(pattern)&is.list(value)&is.list(difference))) stop("arguments must be lists")
+  if (missing(v_label)) {v_label<-attributes(data)$v_label}
+  if (missing(f_label)) {f_label<-paste0("f",1:ncol(pattern$beta_vf))}
+  vf_label <- paste0(v_label,"<-",rep(f_label,each=length(v_label)))
+  fv_label <- paste0(f_label,"<-",rep(v_label,each=length(f_label)))
+  mat_label<- sapply(c(v_label,f_label),function(x) paste0(c(v_label,f_label),"<-",x)) %>% `rownames<-`(c(v_label,f_label))
+  labels   <- list(v_label,f_label,vf_label,fv_label,mat_label)
+  
+  mat      <- matgen(lambda=pattern$beta_vf,n_groups = attributes(data)$n_groups,labels=labels)
+  ref      <- getpar(pattern = mat$pattern,value = list(mat$value$alpha_r,mat$value$beta_r,mat$value$phi_r),v_label,f_label,mat_label,group="r") %>% do.call(rbind,.)
+  inc      <- lapply((1:attributes(data)$n_groups),function(x){
+    getpar(pattern = mat$pattern, value = list(mat$value$alpha_i[[x]],mat$value$beta_i[[x]],mat$value$phi_i[[x]]),v_label,f_label,mat_label,group=x) %>% do.call(rbind,.)
+  } ) %>% do.call(rbind,.)
+  output   <- rbind(ref,inc) %>% as.data.frame
+  output$col<-as.numeric(as.character(output$col))
+  output$row<-as.numeric(as.character(output$row))
+  output$initial<-as.numeric(as.character(output$initial))
+  output$current<-output$initial
+  output$type<-as.numeric(output$type)-1
+  output[!(output$matrix=="phi"&(output$row>output$col)),] %>% return
+}
+
 threshold <- function(theta,gma){
    sign(theta)*max(abs(theta)-gma,0) 
 }
