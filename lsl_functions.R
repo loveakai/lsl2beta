@@ -151,7 +151,11 @@ matgen    <- function(pattern,value,n_groups,scale,labels,ref_group){ #**diminfo
   
   names(alpha_i)    <-names(beta_i)      <-names(phi_i)       <-nm_g
   
-  return(list(pattern=list(alpha_p=alpha_p,beta_p=beta_p,phi_p=phi_p),value=list(alpha_r=alpha_r,beta_r=beta_r,phi_r=phi_r,alpha_i=alpha_i,beta_i=beta_i,phi_i=phi_i)))
+  output<-list(pattern=list(alpha_p=alpha_p,beta_p=beta_p,phi_p=phi_p),value=list(alpha_r=alpha_r,beta_r=beta_r,phi_r=phi_r,alpha_i=alpha_i,beta_i=beta_i,phi_i=phi_i))
+  attr(output,"n_v") <- n_v
+  attr(output,"n_f") <- n_f
+  attr(output,"n_eta") <- n_eta
+  return(output)
   
 }
 
@@ -195,7 +199,9 @@ specify   <- function(pattern,value,difference,ref_group,auto_scale=T,v_label,f_
     type   <-as.numeric(levels(type)[type])
   })
 
-  output[!(output$matrix=="phi"&(output$row>output$col)),] %>% return
+  output   <-output[!(output$matrix=="phi"&(output$row>output$col)),]
+  attr(output,"matinfo") <- attributes(mat)
+  return(output)
 }
 
 threshold <- function(theta,gma){

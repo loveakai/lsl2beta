@@ -128,7 +128,8 @@ invspecify<- function(model,value){
   with(model,split(model,list(group,matrix))) %>%
   lapply(.,function(x){
     
-  y<-diag(0,max(x$row,x$col)) 
+  if(any(x$col!=1)){
+    y<-diag(0,max(x$row,x$col))} else {y<-matrix(0,max(x$row))}
   y[cbind(x$row,x$col)]<-x$initial
   
   return(y)
