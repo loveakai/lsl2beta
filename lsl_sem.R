@@ -71,9 +71,9 @@ F2~~0.4*F3
 '
 
  dta       <-list()
- dta[[1]]  <- lavaan::simulateData(model.cfa,sample.nobs = 20L)  %>% cbind(group=as.factor(1))#%>% cbind(.,sample(c(1,2),size=nrow(.),rep=T))
- dta[[2]]  <- lavaan::simulateData(model.cfa2,sample.nobs = 20L) %>% cbind(group=as.factor(2))
- dta[[3]]  <- lavaan::simulateData(model.cfa3,sample.nobs = 20L) %>% cbind(group=as.factor(3))
+ dta[[1]]  <- lavaan::simulateData(model.cfa,sample.nobs = 20L)  %>% cbind(group="g1")#%>% cbind(.,sample(c(1,2),size=nrow(.),rep=T))
+ dta[[2]]  <- lavaan::simulateData(model.cfa2,sample.nobs = 20L) %>% cbind(group="g2")
+ dta[[3]]  <- lavaan::simulateData(model.cfa3,sample.nobs = 20L) %>% cbind(group="g3")
  dta       <- do.call(rbind,dta)
 
 
@@ -103,15 +103,30 @@ pl <-penalize
 ecmm<-ecm(mat=mat,ide=ide,G_eta=G_eta,maxit=500,cri=10^(-5),penalize=pl)
 
 
-
-
-
 dta       <- lavaan::HolzingerSwineford1939[7:15]
-data      <- import(dta)
+data      <- import(dta,var_group = 10)
 
 beta_vf <- matrix(NA, 9, 3)
 beta_vf[c(1,2,3), 1] <- beta_vf[c(4,5,6), 2] <- beta_vf[c(7,8,9), 3] <- 1
 pattern<-list()
 pattern$beta_vf<-beta_vf
-specify(pattern)
+model     <- specify(pattern)
 
+
+learn <- function(penalty,lambda,delta,control=list(max_iter,rel_tol)){
+  
+}
+
+
+
+invspecify<- function(model,value){
+  with(model,split(model,list(group,matrix))) %>%
+  lapply(.,function(x){
+    
+  y<-diag(0,max(x$row,x$col)) 
+  y[cbind(x$row,x$col)]<-x$initial
+  
+  return(y)
+  }
+  )
+}

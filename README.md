@@ -6,6 +6,7 @@
 
 1. specify簡易完成
 2. 挑選phi只取上/下三角的功能放置於specify中
+3. 刪除betagen函數
 
 #### 20170321
 >(try6)</p>
