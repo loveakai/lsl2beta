@@ -102,9 +102,8 @@ pl <-penalize
 
 ecmm<-ecm(mat=mat,ide=ide,G_eta=G_eta,maxit=500,cri=10^(-5),penalize=pl)
 
-
 dta       <- lavaan::HolzingerSwineford1939[7:15]
-data      <- import(dta,var_group = 10)
+data      <- import(dta)
 
 beta_vf <- matrix(NA, 9, 3)
 beta_vf[c(1,2,3), 1] <- beta_vf[c(4,5,6), 2] <- beta_vf[c(7,8,9), 3] <- 1
@@ -115,24 +114,10 @@ beta_vf[c(2,3),1]    <- beta_vf[c(5,6),2]    <- beta_vf[c(8,9),3]    <- 1
 beta_vf[1,1]         <- beta_vf[4,2]         <- beta_vf[7,3]         <- 0.8
 value <-list()
 value$beta_vf<-beta_vf
-model     <- specify(pattern,value,ref_group="g3")
+model     <- specify(pattern,value)
 
 
 learn <- function(penalty,lambda,delta,control=list(max_iter,rel_tol)){
   
 }
 
-
-
-invspecify<- function(model,value){
-  with(model,split(model,list(group,matrix))) %>%
-  lapply(.,function(x){
-    
-  if(any(x$col!=1)){
-    y<-diag(0,max(x$row,x$col))} else {y<-matrix(0,max(x$row))}
-  y[cbind(x$row,x$col)]<-x$initial
-  
-  return(y)
-  }
-  )
-}

@@ -162,7 +162,7 @@ matgen    <- function(pattern,value,n_groups,scale,labels,ref_group){ #**diminfo
 getpar    <- function(pattern,value,v_label,f_label,mat_label,group){
   mapply(function(ma,val,pat,p,v,co,ro,nm) {
     rbind(nm[p|v],ma,group,ro[p|v],co[p|v],pat[p|v],val[p|v]) %>% 
-      `rownames<-`(c("name","matrix","group","row","col","type","initial"))},
+      `rownames<-`(c("name","matrix","group","row","col","type","value"))},
     val=lapply(value,as.matrix),
     pat=lapply(pattern,as.matrix),
     p=lapply(pattern,function(x) {as.matrix(x) %>% .is_est}),
@@ -454,7 +454,25 @@ dml_cal   <- function(sigma=sigma,e_v=e_v,ini=ini,G_eta=G_eta,n_groups=n_groups,
   return(dml)
 }
 
- 
+invspecify<- function(model, value) {
+  split(model, model$group) %>% lapply(., function(w) {
+    split(w, w$matrix) %>% lapply(., function(x) {
+      if (any(x$col  !=  1)) {
+        y  <-  diag(0, attributes(model)$matinfo$n_eta)
+      } else {
+        y <- matrix(0, attributes(model)$matinfo$n_eta)
+      }
+      if(value=="type"){
+        y[cbind(x$row, x$col)] <- x$type
+      } else if(value=="initial"){
+        y[cbind(x$row, x$col)] <- x$initial
+      } else if (value=="current") {
+        y[cbind(x$row, x$col)] <- x$current
+      }
+      return(y)
+    })
+  })
+}
 
 
 
