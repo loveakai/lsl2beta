@@ -122,11 +122,8 @@ matgen    <- function(pattern,value,n_groups,scale,labels,ref_group){ #**diminfo
     if(exists("beta_fv",value)){
       beta_r[(n_v+1):n_eta,(1:n_v)]        <- value$beta_fv
     }
-    
-    
-    
+ 
     phi_r                                  <- diag(0,n_eta,n_eta)
-    phi_r[(n_v+1):n_eta,(n_v+1):n_eta]     <- 1
     if(exists("phi_ff",value)){
       phi_r[(n_v+1):n_eta,(n_v+1):n_eta]   <- value$phi_ff
     }
@@ -195,12 +192,15 @@ specify   <- function(pattern,value,difference,ref_group,auto_scale=T,v_label,f_
   output   <- within(inc,{
     col    <-as.numeric(levels(col)[col])
     row    <-as.numeric(levels(row)[row])
-    current<-initial<-as.numeric(levels(initial)[initial])
+    initial<-current<-as.numeric(levels(value)[value])
     type   <-as.numeric(levels(type)[type])
+    rm(value)
   })
 
   output   <-output[!(output$matrix=="phi"&(output$row>output$col)),]
-  attr(output,"matinfo") <- attributes(mat)
+  #attr(output,"matinfo") <- attributes(mat)
+  attr(output,"mat")<-mat
+  attr(output,"labels")<-labels
   return(output)
 }
 
@@ -211,15 +211,15 @@ threshold <- function(theta,gma){
 varphi    <- function(x,Phi) {diag(Phi)[x]-Phi[x,-x]%*%solve(Phi[-x,-x])%*%Phi[-x,x]}
 
 penalty   <- function(theta,gamma,cth,w,delta,type){
-  if (type == "L1") {
+  if (type == "l1") {
     theta <- threshold(theta, gamma * cth * w)
-  } else if (type == "SCAD") {
+  } else if (type == "scad") {
     if (abs(theta) <= gamma * (1 + cth * w)) {
       theta <- threshold(theta, cth * w * gamma)
     } else if (gamma * (1 + cth * w) < abs(theta) & abs(theta) <= gamma * delta) {
       theta <- threshold(theta, (cth * w * gamma * delta) / (delta - 1)) / (1 - ((cth * w) / (delta - 1)))
     } else { }
-  } else if (type == "MCP") {
+  } else if (type == "mcp") {
     if (abs(theta) <= gamma * delta) {
       theta <- threshold(theta, cth * w * gamma) / (1 - ((cth * w) / delta))
     } else { }
@@ -376,19 +376,8 @@ cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,mat=ini$mat,e_step=e_step,type=type,
               phi_i=phi_i))
 } 
 
-ecm       <- function(mat=mat,ide=ide,G_eta=G_eta,maxit=500,cri=10^(-5),penalize=pl){
-  
-  if (missing(penalize)) {
-    message("penalize information is not specified, using default")
-    type<-"L1"
-    gamma<-0.025
-    delta<-2.5
-  } else{
-    if (exists("type",penalize))  {type<-penalize$type}     else {message("type is not specified,using default:'L1'")  ;type <-"L1"}
-    if (exists("gamma",penalize)) {gamma<-penalize$gamma}   else {message("gamma is not specified,using default:0.025");gamma<-0.025} 
-    if (exists("delta",penalize)) {delta<-penalize$delta}   else {message("delta is not specified,using default:2.5")  ;delta<-2.5}  
-  }
-  
+ecm       <- function(mat=mat,ide=ide,G_eta=G_eta,maxit,cri,penalize){
+
 
   alpha_p   <- mat$pattern$alpha_p
   beta_p    <- mat$pattern$beta_p
@@ -400,13 +389,17 @@ ecm       <- function(mat=mat,ide=ide,G_eta=G_eta,maxit=500,cri=10^(-5),penalize
   beta_i    <- mat$value$beta_i
   phi_i     <- mat$value$phi_i
   
+  type      <- penalize[1]
+  delta     <- penalize[2]
+  gamma     <- penalize[3]
+  
   #initialization
   
   IBinv     <- lapply(1:n_groups, function(i_groups) solve(ide-(beta_r+beta_i[[i_groups]])))
   mu_eta    <- lapply(1:n_groups, function(i_groups) IBinv[[i_groups]]%*%(alpha_r+alpha_i[[i_groups]]))
   sigma_eta <- lapply(1:n_groups, function(i_groups) IBinv[[i_groups]]%*%(phi_r+phi_i[[i_groups]])%*%t(IBinv[[i_groups]]))
   
-  w_g       <- rep(list(1/3),n_groups)
+  w_g       <- rep(list(1),n_groups)
   JK        <- expand.grid(1:n_eta,1:n_eta)[2:1]
   JLK       <- expand.grid(1:(n_eta-1),1:n_eta)[2:1]
   
@@ -414,7 +407,7 @@ ecm       <- function(mat=mat,ide=ide,G_eta=G_eta,maxit=500,cri=10^(-5),penalize
 
   
   for (it in 1:maxit){
-    cat(it, "...")
+    cat("...",it)
     e_step    <- estep(ini)
     cm_step   <- cmstep(w_g=w_g,JK=JK,JLK=JLK,mat=ini$mat,e_step=e_step,type=type,gamma=gamma,delta=delta)
     ini$mat$value$phi_r   <- phi_r     <- cm_step$phi_r
@@ -427,13 +420,11 @@ ecm       <- function(mat=mat,ide=ide,G_eta=G_eta,maxit=500,cri=10^(-5),penalize
     ini$mu_eta            <- lapply(1:n_groups, function(i_groups) ini$IBinv[[i_groups]]%*%(alpha_r+alpha_i[[i_groups]]))
     ini$sigma_eta         <- lapply(1:n_groups, function(i_groups) ini$IBinv[[i_groups]]%*%(phi_r+phi_i[[i_groups]])%*%t(ini$IBinv[[i_groups]]))
   }
-  
-  #theta     <- c(alpha_r[.is_est(ini$mat$pattern$alpha_p)],beta_r[.is_est(ini$mat$pattern$beta_p)],phi_r[.is_est(ini$mat$pattern$phi_p)])
-  #length(theta)
+
   
   dml<-dml_cal(sigma=sigma,e_v=e_v,ini=ini,G_eta=G_eta,n_groups=n_groups,w_g=w_g)
   
-  return(list(theta=ini,dml=dml,gamma=gamma,delta=delta,type=type,iteration=it))
+  return(list(theta=ini,dml=dml,penalize=penalize,iteration=it))
   
 }
 
@@ -458,9 +449,9 @@ invspecify<- function(model, value) {
   split(model, model$group) %>% lapply(., function(w) {
     split(w, w$matrix) %>% lapply(., function(x) {
       if (any(x$col  !=  1)) {
-        y  <-  diag(0, attributes(model)$matinfo$n_eta)
+        y  <-  diag(0, attributes(model)$mat %>% attributes %$% n_eta)
       } else {
-        y <- matrix(0, attributes(model)$matinfo$n_eta)
+        y <- matrix(0, attributes(model)$mat %>% attributes %$% n_eta)
       }
       if(value=="type"){
         y[cbind(x$row, x$col)] <- x$type
@@ -473,8 +464,4 @@ invspecify<- function(model, value) {
     })
   })
 }
-
-
-
-
 

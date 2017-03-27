@@ -70,40 +70,20 @@ F1~~0.4*F3
 F2~~0.4*F3
 '
 
+
  dta       <-list()
- dta[[1]]  <- lavaan::simulateData(model.cfa,sample.nobs = 20L)  %>% cbind(group="g1")#%>% cbind(.,sample(c(1,2),size=nrow(.),rep=T))
- dta[[2]]  <- lavaan::simulateData(model.cfa2,sample.nobs = 20L) %>% cbind(group="g2")
- dta[[3]]  <- lavaan::simulateData(model.cfa3,sample.nobs = 20L) %>% cbind(group="g3")
+ dta[[1]]  <- lavaan::simulateData(model.cfa,sample.nobs = 500L)  %>% cbind(group="g1")#%>% cbind(.,sample(c(1,2),size=nrow(.),rep=T))
+ dta[[2]]  <- lavaan::simulateData(model.cfa2,sample.nobs = 500L) %>% cbind(group="g2")
+ dta[[3]]  <- lavaan::simulateData(model.cfa3,sample.nobs = 500L) %>% cbind(group="g3")
  dta       <- do.call(rbind,dta)
 
 
 
-n_groups  <- length(dta)
-
-nm        <- c(paste0("v",1:n_v),paste0("f",1:n_f))
-sigma     <- lapply(1:n_groups, function(i_groups) {dta[[i_groups]] %>% as.matrix %>% crossprod %>% "/"(nrow(dta[[i_groups]])) %>%
-    `colnames<-`(nm[1:n_v]) %>% `rownames<-`(colnames(.))})
-e_v       <- lapply(1:n_groups, function(i_groups) sapply(dta[[i_groups]],mean)[1:n_v] %>% `names<-`(nm[1:n_v]))
+#mat       <- matgen(lambda=beta_vf)
 
 
-
-eta       <- vector(mode = "numeric",n_eta)   %>%`names<-`(nm)
-zeta      <- vector(mode = "numeric",n_eta)   %>%`names<-`(nm)
-ide       <- diag(1, ncol = n_eta, nrow = n_eta)  %>% `colnames<-`(nm) %>% `rownames<-`(nm) 
-G_eta     <- c(rep(T,n_v),rep(F,n_f)) %>%`names<-`(nm)
-v         <- subset(eta,G_eta)
-
-mat       <- matgen(lambda=beta_vf)
-penalize  <- list(type="L1",delta=0.025,gamma=2.5)
-
-pl <-penalize
-
-#ECM
-
-ecmm<-ecm(mat=mat,ide=ide,G_eta=G_eta,maxit=500,cri=10^(-5),penalize=pl)
-
-dta       <- lavaan::HolzingerSwineford1939[7:15]
-data      <- import(dta)
+#dta       <- lavaan::HolzingerSwineford1939[7:15]
+data      <- import(dta,var_group = 10)
 
 beta_vf <- matrix(NA, 9, 3)
 beta_vf[c(1,2,3), 1] <- beta_vf[c(4,5,6), 2] <- beta_vf[c(7,8,9), 3] <- 1
@@ -115,9 +95,40 @@ beta_vf[1,1]         <- beta_vf[4,2]         <- beta_vf[7,3]         <- 0.8
 value <-list()
 value$beta_vf<-beta_vf
 model     <- specify(pattern,value)
+#model <- specify(pattern)
 
+learn     <- function(penalty,gamma,delta,control=list(max_iter,rel_tol)){
+  if (missing(penalty)) {pl<-"l1"} else {pl<-penalty}
+  if (missing(gamma))   gamma  <-10
+  if (missing(delta))   delta  <-seq(0.025,0.1,0.025)
+  if (missing(control)) {control<-list(max_iter=500,rel_tol=10^(-5))} else {
+    if (is.null(control$max_iter)) {control$max_iter<-500}
+    if (is.null(control$rel_tol))  {control$rel_tol <-10^(-5)}
+    }
+  mat       <-attributes(model)$mat
+  eta_label <-c(attributes(model)$labels[[1]],attributes(model)$labels[[2]])
+  n_groups  <-attributes(data)$n_groups
+  n_eta     <-attributes(mat)$n_eta
+  n_v       <-attributes(mat)$n_v
+  n_f       <-attributes(mat)$n_f
+  raw_obs   <-data$raw_obs
+  
+  ide       <- diag(1, ncol = n_eta, nrow = n_eta)  %>% `colnames<-`(eta_label) %>% `rownames<-`(eta_label) 
+  G_eta     <- c(rep(T,n_v),rep(F,n_f)) %>%`names<-`(eta_label)
+  sigma     <- lapply(1:n_groups, function(i_groups) { data$raw_cov[[i_groups]] + data$raw_mean[[i_groups]] %>% tcrossprod })
+  e_v       <- lapply(1:n_groups, function(i_groups) { data$raw_mean[[i_groups]] })
+  
+  
 
-learn <- function(penalty,lambda,delta,control=list(max_iter,rel_tol)){
+  
+  allpen<-expand.grid(pl=pl,delta=delta,gamma=gamma)
+  
+  for (p in (1:nrow(allpen))){
+  penalize  <- list(pl=allpen[p,1],delta=allpen[p,2],gamma=allpen[p,3],type="L1")
+  
+  #ECM
+  
+  ecmm<-ecm(mat=mat,ide=ide,G_eta=G_eta,maxit=control[[1]],cri=control[[2]],penalize=penalize)
   
 }
 
