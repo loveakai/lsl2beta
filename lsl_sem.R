@@ -1,5 +1,5 @@
 rm(list=ls())
-set.seed=4869
+set.seed(4869)
 library(dplyr);library(gtools);library(magrittr);library(plyr);library(reshape2)
 
 source('./lsl_tool.R')
@@ -21,9 +21,9 @@ x9~~(1-0.8^2)*x9
 F2~~1*F2
 F3~~1*F3
 F1~~1*F1
-F1~~0.4*F2
-F1~~0.4*F3
-F2~~0.4*F3
+F1~~0*F2
+F1~~0*F3
+F2~~0*F3
 '
 
 model.cfa2<-'
@@ -42,9 +42,9 @@ x9~~(1-0.6^2)*x9
 F2~~1*F2
 F3~~1*F3
 F1~~1*F1
-F1~~0.4*F2
-F1~~0.4*F3
-F2~~0.4*F3
+F1~~0*F2
+F1~~0*F3
+F2~~0*F3
 '
 
 
@@ -65,16 +65,16 @@ x9~~(1-0.4^2)*x9
 F2~~1*F2
 F3~~1*F3
 F1~~1*F1
-F1~~0.4*F2
-F1~~0.4*F3
-F2~~0.4*F3
+F1~~0*F2
+F1~~0*F3
+F2~~0*F3
 '
 
 
  dta       <-list()
- dta[[1]]  <- lavaan::simulateData(model.cfa,sample.nobs = 500L)  %>% cbind(group="g1")#%>% cbind(.,sample(c(1,2),size=nrow(.),rep=T))
- dta[[2]]  <- lavaan::simulateData(model.cfa2,sample.nobs = 500L) %>% cbind(group="g2")
- dta[[3]]  <- lavaan::simulateData(model.cfa3,sample.nobs = 500L) %>% cbind(group="g3")
+ dta[[1]]  <- lavaan::simulateData(model.cfa,sample.nobs = 10000L)  %>% cbind(group="g1")#%>% cbind(.,sample(c(1,2),size=nrow(.),rep=T))
+ dta[[2]]  <- lavaan::simulateData(model.cfa2,sample.nobs = 10000L) %>% cbind(group="g2")
+ dta[[3]]  <- lavaan::simulateData(model.cfa3,sample.nobs = 10000L) %>% cbind(group="g3")
  dta       <- do.call(rbind,dta)
 
 
@@ -99,8 +99,8 @@ model     <- specify(pattern,value)
 
 learn     <- function(penalty,gamma,delta,control=list(max_iter,rel_tol)){
   if (missing(penalty)) {pl<-"l1"} else {pl<-penalty}
-  if (missing(gamma))   gamma  <-10
-  if (missing(delta))   delta  <-seq(0.025,0.1,0.025)
+  if (missing(gamma))   gamma  <-seq(0.025,0.1,0.025)
+  if (missing(delta))   delta  <-2.5
   if (missing(control)) {control<-list(max_iter=500,rel_tol=10^(-5))} else {
     if (is.null(control$max_iter)) {control$max_iter<-500}
     if (is.null(control$rel_tol))  {control$rel_tol <-10^(-5)}
@@ -124,7 +124,7 @@ learn     <- function(penalty,gamma,delta,control=list(max_iter,rel_tol)){
   allpen<-expand.grid(pl=pl,delta=delta,gamma=gamma)
   
   for (p in (1:nrow(allpen))){
-  penalize  <- list(pl=allpen[p,1],delta=allpen[p,2],gamma=allpen[p,3],type="L1")
+  penalize  <- list(pl=allpen[p,1],delta=allpen[p,2],gamma=allpen[p,3])
   
   #ECM
   
@@ -132,3 +132,7 @@ learn     <- function(penalty,gamma,delta,control=list(max_iter,rel_tol)){
   
 }
 
+  ecmm$theta$mat$value$beta_r+ecmm$theta$mat$value$beta_i[[1]]
+  ecmm$theta$mat$value$beta_r+ecmm$theta$mat$value$beta_i[[2]]
+  ecmm$theta$mat$value$beta_r+ecmm$theta$mat$value$beta_i[[3]]
+  

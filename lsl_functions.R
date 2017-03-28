@@ -389,9 +389,9 @@ ecm       <- function(mat=mat,ide=ide,G_eta=G_eta,maxit,cri,penalize){
   beta_i    <- mat$value$beta_i
   phi_i     <- mat$value$phi_i
   
-  type      <- penalize[1]
-  delta     <- penalize[2]
-  gamma     <- penalize[3]
+  type      <- penalize$pl
+  delta     <- penalize$delta
+  gamma     <- penalize$gamma
   
   #initialization
   
