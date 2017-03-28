@@ -106,7 +106,11 @@ learn     <- function(penalty,gamma,delta,control=list(max_iter,rel_tol)){
     if (is.null(control$rel_tol))  {control$rel_tol <-10^(-5)}
     }
   mat       <-attributes(model)$mat
-  eta_label <-c(attributes(model)$labels[[1]],attributes(model)$labels[[2]])
+  v_label   <-attributes(model)$labels$v_label
+  f_label   <-attributes(model)$labels$f_label
+  eta_label <-c(v_label,f_label)
+  mat_label <-attributes(model)$labels$mat_label
+  
   n_groups  <-attributes(data)$n_groups
   n_eta     <-attributes(mat)$n_eta
   n_v       <-attributes(mat)$n_v
@@ -118,21 +122,13 @@ learn     <- function(penalty,gamma,delta,control=list(max_iter,rel_tol)){
   sigma     <- lapply(1:n_groups, function(i_groups) { data$raw_cov[[i_groups]] + data$raw_mean[[i_groups]] %>% tcrossprod })
   e_v       <- lapply(1:n_groups, function(i_groups) { data$raw_mean[[i_groups]] })
   
-  
-
-  
   allpen<-expand.grid(pl=pl,delta=delta,gamma=gamma)
   
   for (p in (1:nrow(allpen))){
   penalize  <- list(pl=allpen[p,1],delta=allpen[p,2],gamma=allpen[p,3])
-  
-  #ECM
-  
-  ecmm<-ecm(mat=mat,ide=ide,G_eta=G_eta,maxit=control[[1]],cri=control[[2]],penalize=penalize)
+  ecm_output<-ecm(mat=mat,ide=ide,G_eta=G_eta,maxit=control[[1]],cri=control[[2]],penalize=penalize)
   
 }
 
-  ecmm$theta$mat$value$beta_r+ecmm$theta$mat$value$beta_i[[1]]
-  ecmm$theta$mat$value$beta_r+ecmm$theta$mat$value$beta_i[[2]]
-  ecmm$theta$mat$value$beta_r+ecmm$theta$mat$value$beta_i[[3]]
+  
   
