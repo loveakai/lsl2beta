@@ -82,8 +82,8 @@ F2~~0*F3
 #mat       <- matgen(lambda=beta_vf)
 
 
-#dta       <- lavaan::HolzingerSwineford1939[7:15]
-data      <- import(dta,var_group = 10)
+dta       <- lavaan::HolzingerSwineford1939[7:15]
+data      <- import(dta)
 
 beta_vf <- matrix(NA, 9, 3)
 beta_vf[c(1,2,3), 1] <- beta_vf[c(4,5,6), 2] <- beta_vf[c(7,8,9), 3] <- 1
@@ -91,14 +91,14 @@ pattern <-list()
 pattern$beta_vf<-beta_vf
 beta_vf <- matrix(0,9,3)
 beta_vf[c(2,3),1]    <- beta_vf[c(5,6),2]    <- beta_vf[c(8,9),3]    <- 1
-beta_vf[1,1]         <- beta_vf[4,2]         <- beta_vf[7,3]         <- 0.8
+beta_vf[1,1]         <- beta_vf[4,2]         <- beta_vf[7,3]         <- 1
 value <-list()
 value$beta_vf<-beta_vf
 model     <- specify(pattern,value)
 #model <- specify(pattern)
 
 learn     <- function(penalty,gamma,delta,control=list(max_iter,rel_tol)){
-  if (missing(penalty)) {pl<-"l1"} else {pl<-penalty}
+  if (missing(penalty)) {pl<-"scad"} else {pl<-penalty}
   if (missing(gamma))   gamma  <-seq(0.025,0.1,0.025)
   if (missing(delta))   delta  <-2.5
   if (missing(control)) {control<-list(max_iter=500,rel_tol=10^(-5))} else {
@@ -124,11 +124,17 @@ learn     <- function(penalty,gamma,delta,control=list(max_iter,rel_tol)){
   
   allpen<-expand.grid(pl=pl,delta=delta,gamma=gamma)
   
+  learned<-list()
+  par    <-list()
+                 
   for (p in (1:nrow(allpen))){
   penalize  <- list(pl=allpen[p,1],delta=allpen[p,2],gamma=allpen[p,3])
   ecm_output<-ecm(mat=mat,ide=ide,G_eta=G_eta,maxit=control[[1]],cri=control[[2]],penalize=penalize)
+  learned[[p]]<-ecm_output$theta
+  par    [[p]]<-ecm_output$n_par
   
 }
 
-  
-  
+  names(learned)<-paste0(allpen[,1],"-",allpen[,2],"-",allpen[,3])
+  return(learned) 
+} 

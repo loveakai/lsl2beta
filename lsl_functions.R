@@ -96,12 +96,12 @@ matgen    <- function(pattern,value,n_groups,scale,labels,ref_group){ #**diminfo
   #matrices generation
   ## reference component
   if(missing(value)){
-  alpha_r <- c(rep(0.01,n_v),rep(0,n_f))
+  alpha_r <- c(data$raw_mean[[1]],rep(0,n_f))
   beta_r  <- 1 *.is_one(beta_p)
   phi_r   <- diag(0,n_eta,n_eta)
   } else {
     
-    alpha_r                                <- c(rep(0.01,n_v),rep(0,n_f))
+    alpha_r                                <- c(data$raw_mean[[1]],rep(0,n_f))
     if(exists("alpha_v",value)){
       alpha_r[1:n_v]                       <- value$alpha_v
     }
@@ -229,19 +229,20 @@ penalty   <- function(theta,gamma,cth,w,delta,type){
 
 estep     <- function(ini){
   mu_v      <- lapply(1:n_groups, function(i_groups) subset(ini$mu_eta[[i_groups]],ini$G_eta))
-  sigma_vf  <- lapply(1:n_groups, function(i_groups) subset(ini$sigma_eta[[i_groups]],ini$G_eta))
-  sigma_fv  <- lapply(1:n_groups, function(i_groups) t(sigma_vf[[i_groups]]))
+  sigma_veta<- lapply(1:n_groups, function(i_groups) subset(ini$sigma_eta[[i_groups]],ini$G_eta))
+  sigma_etav<- lapply(1:n_groups, function(i_groups) t(sigma_veta[[i_groups]]))
   sigma_v   <- lapply(1:n_groups, function(i_groups) subset(ini$sigma_eta[[i_groups]],ini$G_eta,ini$G_eta))
-  J         <- lapply(1:n_groups, function(i_groups) ini$mu_eta[[i_groups]] - sigma_fv[[i_groups]] %*% solve(sigma_v[[i_groups]]) %*% mu_v[[i_groups]])
-  K         <- lapply(1:n_groups, function(i_groups) sigma_fv[[i_groups]] %*% solve(sigma_v[[i_groups]]))
+  J         <- lapply(1:n_groups, function(i_groups) mu_eta[[i_groups]] - sigma_etav[[i_groups]] %*% solve(sigma_v[[i_groups]]) %*% mu_v[[i_groups]])
+  K         <- lapply(1:n_groups, function(i_groups) sigma_etav[[i_groups]] %*% solve(sigma_v[[i_groups]]))
   c_v       <- lapply(1:n_groups, function(i_groups) ini$sigma[[i_groups]])
   e_eta     <- lapply(1:n_groups, function(i_groups) J[[i_groups]]+K[[i_groups]]%*%ini$e_v[[i_groups]])
-  c_eta  <- lapply(1:n_groups, function(i_groups) {ini$sigma_eta[[i_groups]] - sigma_fv[[i_groups]] %*% solve(sigma_v[[i_groups]]) %*% sigma_vf[[i_groups]] +
+  c_eta     <- lapply(1:n_groups, function(i_groups) {ini$sigma_eta[[i_groups]] - sigma_etav[[i_groups]] %*% solve(sigma_v[[i_groups]]) %*% sigma_veta[[i_groups]] +
     J[[i_groups]] %*% t(J[[i_groups]]) + J[[i_groups]] %*% t(ini$e_v[[i_groups]]) %*% t(K[[i_groups]]) + K[[i_groups]] %*% ini$e_v[[i_groups]] %*% t(J[[i_groups]]) +
     K[[i_groups]] %*% c_v[[i_groups]] %*% t(K[[i_groups]])})
   
   return(list(e_eta=e_eta, c_eta=c_eta))
 }
+
 
 cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,mat=ini$mat,e_step=e_step,type=type,gamma=gamma,delta=delta){
   
@@ -268,7 +269,6 @@ cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,mat=ini$mat,e_step=e_step,type=type,
           w_g[[i_groups]] * solve(phi_r+phi_i[[i_groups]])[j,-j]  %*% (e_eta[[i_groups]] - (alpha_r + alpha_i[[i_groups]]) - (beta_r+beta_i[[i_groups]]) %*% e_eta[[i_groups]])[-j]})))
         )
         }
-
   # Beta
   
   for (i in which(.is_est(mat$pattern$beta_p))){
@@ -435,9 +435,10 @@ ecm       <- function(mat=mat,ide=ide,G_eta=G_eta,maxit,cri,penalize){
     output   <- within(inc,{
       col    <-as.numeric(levels(col)[col])
       row    <-as.numeric(levels(row)[row])
+      value  <-as.numeric(levels(value)[value])
     })
     output   <-output[!(output$matrix=="phi"&(output$row>output$col)),]
-    newval   <-as.numeric(levels(output$value)[output$value])
+    newval   <-output$value
     if (sum((newval-inival)^2)<cri) {break} else {inival<-newval} 
   }
   
