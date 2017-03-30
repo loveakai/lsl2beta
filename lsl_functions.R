@@ -228,6 +228,7 @@ penalty   <- function(theta,gamma,cth,w,delta,type){
 }
 
 estep     <- function(ini){
+  n_groups  <-attributes(data)$n_groups
   mu_eta    <- ini$mu_eta
   mu_v      <- lapply(1:n_groups, function(i_groups) subset(ini$mu_eta[[i_groups]],ini$G_eta))
   sigma_veta<- lapply(1:n_groups, function(i_groups) subset(ini$sigma_eta[[i_groups]],ini$G_eta))
@@ -255,6 +256,7 @@ cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,mat=ini$mat,e_step=e_step,type=type,
   beta_i    <- mat$value$beta_i
   alpha_i   <- mat$value$alpha_i
   n_eta     <- length(mat$pattern$alpha_p)
+  n_groups  <- attributes(data)$n_groups
 
   ## reference components updating
 
@@ -376,7 +378,7 @@ cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,mat=ini$mat,e_step=e_step,type=type,
               phi_i=phi_i))
 } 
 
-ecm       <- function(mat=mat,ide=ide,G_eta=G_eta,maxit,cri,penalize){
+ecm       <- function(mat=mat,maxit,cri,penalize){
 
 
   alpha_p   <- mat$pattern$alpha_p
@@ -393,6 +395,21 @@ ecm       <- function(mat=mat,ide=ide,G_eta=G_eta,maxit,cri,penalize){
   delta     <- penalize$delta
   gamma     <- penalize$gamma
   
+  n_groups  <-attributes(data)$n_groups
+  n_eta     <-attributes(mat)$n_eta
+  n_v       <-attributes(mat)$n_v
+  n_f       <-attributes(mat)$n_f
+  
+  v_label   <-attributes(model)$labels$v_label
+  f_label   <-attributes(model)$labels$f_label
+  eta_label <-c(v_label,f_label)
+  mat_label <-attributes(model)$labels$mat_label
+  
+  
+  ide       <- diag(1, ncol = n_eta, nrow = n_eta)  %>% `colnames<-`(eta_label) %>% `rownames<-`(eta_label) 
+  G_eta     <- c(rep(T,n_v),rep(F,n_f)) %>%`names<-`(eta_label)
+  sigma     <- lapply(1:n_groups, function(i_groups) { data$raw_cov[[i_groups]] + data$raw_mean[[i_groups]] %>% tcrossprod })
+  e_v       <- lapply(1:n_groups, function(i_groups) { data$raw_mean[[i_groups]] })
   #initialization
   
   IBinv     <- lapply(1:n_groups, function(i_groups) solve(ide-(beta_r+beta_i[[i_groups]])))
