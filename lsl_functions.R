@@ -192,7 +192,7 @@ specify   <- function(pattern,value,difference,ref_group,auto_scale=T,v_label,f_
   output   <- within(inc,{
     col    <-as.numeric(levels(col)[col])
     row    <-as.numeric(levels(row)[row])
-    initial<-current<-as.numeric(levels(value)[value])
+    initial<-as.numeric(levels(value)[value])
     type   <-as.numeric(levels(type)[type])
     rm(value)
   })
@@ -228,6 +228,7 @@ penalty   <- function(theta,gamma,cth,w,delta,type){
 }
 
 estep     <- function(ini){
+  mu_eta    <- ini$mu_eta
   mu_v      <- lapply(1:n_groups, function(i_groups) subset(ini$mu_eta[[i_groups]],ini$G_eta))
   sigma_veta<- lapply(1:n_groups, function(i_groups) subset(ini$sigma_eta[[i_groups]],ini$G_eta))
   sigma_etav<- lapply(1:n_groups, function(i_groups) t(sigma_veta[[i_groups]]))
@@ -242,7 +243,6 @@ estep     <- function(ini){
   
   return(list(e_eta=e_eta, c_eta=c_eta))
 }
-
 
 cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,mat=ini$mat,e_step=e_step,type=type,gamma=gamma,delta=delta){
   
@@ -399,7 +399,7 @@ ecm       <- function(mat=mat,ide=ide,G_eta=G_eta,maxit,cri,penalize){
   mu_eta    <- lapply(1:n_groups, function(i_groups) IBinv[[i_groups]]%*%(alpha_r+alpha_i[[i_groups]]))
   sigma_eta <- lapply(1:n_groups, function(i_groups) IBinv[[i_groups]]%*%(phi_r+phi_i[[i_groups]])%*%t(IBinv[[i_groups]]))
   
-  w_g       <- rep(list(1),n_groups)
+  w_g       <- attributes(data)$obs_size/sum(attributes(data)$obs_size)
   JK        <- expand.grid(1:n_eta,1:n_eta)[2:1]
   JLK       <- expand.grid(1:(n_eta-1),1:n_eta)[2:1]
   
@@ -442,8 +442,8 @@ ecm       <- function(mat=mat,ide=ide,G_eta=G_eta,maxit,cri,penalize){
     if (sum((newval-inival)^2)<cri) {break} else {inival<-newval} 
   }
   
-  output<-output[.is_one(output$type)|(output$type==0&output$value!=0)|(is.na(output$type)&output$value!=0),]
-  n_par<-nrow(output[.is_est(output$type),])
+  output_par<-output[.is_one(output$type)|(output$type==0&output$value!=0)|(is.na(output$type)&output$value!=0),]
+  n_par<-nrow(output_par[.is_est(output_par$type),])
   dml<-dml_cal(sigma=sigma,e_v=e_v,ini=ini,G_eta=G_eta,n_groups=n_groups,w_g=w_g)
   
   

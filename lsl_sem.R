@@ -100,7 +100,7 @@ model     <- specify(pattern,value)
 learn     <- function(penalty,gamma,delta,control=list(max_iter,rel_tol)){
   if (missing(penalty)) {pl<-"scad"} else {pl<-penalty}
   if (missing(gamma))   gamma  <-seq(0.025,0.1,0.025)
-  if (missing(delta))   delta  <-2.5
+  if (missing(delta))   delta  <-c(2.5,5)
   if (missing(control)) {control<-list(max_iter=500,rel_tol=10^(-5))} else {
     if (is.null(control$max_iter)) {control$max_iter<-500}
     if (is.null(control$rel_tol))  {control$rel_tol <-10^(-5)}
@@ -122,19 +122,23 @@ learn     <- function(penalty,gamma,delta,control=list(max_iter,rel_tol)){
   sigma     <- lapply(1:n_groups, function(i_groups) { data$raw_cov[[i_groups]] + data$raw_mean[[i_groups]] %>% tcrossprod })
   e_v       <- lapply(1:n_groups, function(i_groups) { data$raw_mean[[i_groups]] })
   
-  allpen<-expand.grid(pl=pl,delta=delta,gamma=gamma)
+  #allpen<-expand.grid(pl=pl,delta=delta,gamma=gamma)
   
-  learned<-list()
-  par    <-list()
-                 
-  for (p in (1:nrow(allpen))){
+  indicator <-paste0(model$name,"-",model$matrix,"-",model$group)
+  individual<-array(NA, c(nrow(model),length(gamma),length(delta)),dimnames = list(indicator,paste0("gamma=",gamma),paste0("delta=",delta)))
+  information<-array(NA,c(10,length(gamma),length(delta)),dimnames = list(c("n_par","iter","dml",4:10),paste0("gamma=",gamma),paste0("delta=",delta)))
+  
+  for(q in (1:length(delta))){               
+  for (p in (1:length(gamma))){
   penalize  <- list(pl=allpen[p,1],delta=allpen[p,2],gamma=allpen[p,3])
   ecm_output<-ecm(mat=mat,ide=ide,G_eta=G_eta,maxit=control[[1]],cri=control[[2]],penalize=penalize)
-  learned[[p]]<-ecm_output$theta
-  par    [[p]]<-ecm_output$n_par
-  
-}
+  individual[,p,q]<-ecm_output$theta$value
+  information[[1,p,q]]<-ecm_output$n_par
+  information[[2,p,q]]<-ecm_output$iteration
+  information[[3,p,q]]<-ecm_output$dml
+  }
+  }
 
-  names(learned)<-paste0(allpen[,1],"-",allpen[,2],"-",allpen[,3])
+
   return(learned) 
 } 
