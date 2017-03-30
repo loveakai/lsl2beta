@@ -149,7 +149,7 @@
   sigma_v   <- lapply(1:n_groups, function(i_groups) subset(ini$sigma_eta[[i_groups]],ini$G_eta,ini$G_eta))
   J         <- lapply(1:n_groups, function(i_groups) mu_eta[[i_groups]] - sigma_etav[[i_groups]] %*% solve(sigma_v[[i_groups]]) %*% mu_v[[i_groups]])
   K         <- lapply(1:n_groups, function(i_groups) sigma_etav[[i_groups]] %*% solve(sigma_v[[i_groups]]))
-  c_v       <- lapply(1:n_groups, function(i_groups) ini$sigma[[i_groups]])
+  c_v       <- ini$c_v
   e_eta     <- lapply(1:n_groups, function(i_groups) J[[i_groups]]+K[[i_groups]]%*%ini$e_v[[i_groups]])
   c_eta     <- lapply(1:n_groups, function(i_groups) {ini$sigma_eta[[i_groups]] - sigma_etav[[i_groups]] %*% solve(sigma_v[[i_groups]]) %*% sigma_veta[[i_groups]] +
       J[[i_groups]] %*% t(J[[i_groups]]) + J[[i_groups]] %*% t(ini$e_v[[i_groups]]) %*% t(K[[i_groups]]) + K[[i_groups]] %*% ini$e_v[[i_groups]] %*% t(J[[i_groups]]) +
@@ -293,7 +293,6 @@
 
 .ecm       <- function(mat=mat,maxit,cri,penalize,model=model,data=data){
   
-  
   alpha_p   <- mat$pattern$alpha_p
   beta_p    <- mat$pattern$beta_p
   phi_p     <- mat$pattern$phi_p
@@ -321,7 +320,7 @@
   
   ide       <- diag(1, ncol = n_eta, nrow = n_eta)  %>% `colnames<-`(eta_label) %>% `rownames<-`(eta_label) 
   G_eta     <- c(rep(T,n_v),rep(F,n_f)) %>%`names<-`(eta_label)
-  sigma     <- lapply(1:n_groups, function(i_groups) { data$raw_cov[[i_groups]] + data$raw_mean[[i_groups]] %>% tcrossprod })
+  c_v       <- lapply(1:n_groups, function(i_groups) { data$raw_cov[[i_groups]] + data$raw_mean[[i_groups]] %>% tcrossprod })
   e_v       <- lapply(1:n_groups, function(i_groups) { data$raw_mean[[i_groups]] })
   #initialization
   
@@ -333,7 +332,7 @@
   JK        <- expand.grid(1:n_eta,1:n_eta)[2:1]
   JLK       <- expand.grid(1:(n_eta-1),1:n_eta)[2:1]
   
-  ini       <- list(IBinv=IBinv,mu_eta=mu_eta,sigma_eta=sigma_eta,sigma=sigma,G_eta=G_eta,e_v=e_v,mat=mat)
+  ini       <- list(IBinv=IBinv,mu_eta=mu_eta,sigma_eta=sigma_eta,c_v=c_v,G_eta=G_eta,e_v=e_v,mat=mat)
   ref      <- .getpar(pattern = ini$mat$pattern,value = list(ini$mat$value$alpha_r,ini$mat$value$beta_r,ini$mat$value$phi_r),v_label,f_label,mat_label,group="r") %>% do.call(rbind,.)
   inc      <- lapply((1:n_groups),function(x){
     .getpar(pattern = ini$mat$pattern, value = list(ini$mat$value$alpha_i[[x]],ini$mat$value$beta_i[[x]],ini$mat$value$phi_i[[x]]),v_label,f_label,mat_label,group=names(ini$mat$value$alpha_i[x])) %>% do.call(rbind,.)
@@ -374,14 +373,14 @@
   
   output_par<-output[.is_one(output$type)|(output$type==0&output$value!=0)|(is.na(output$type)&output$value!=0),]
   n_par<-nrow(output_par[.is_est(output_par$type),])
-  dml<-.dml_cal(sigma=sigma,e_v=e_v,ini=ini,G_eta=G_eta,n_groups=n_groups,w_g=w_g)
+  dml<-.dml_cal(sigma=data$raw_cov,e_v=e_v,ini=ini,G_eta=G_eta,n_groups=n_groups,w_g=w_g)
   
   
   return(list(theta=output,dml=dml,penalize=penalize,iteration=it,n_par=n_par))
   
 }
 
-.dml_cal   <- function(sigma=sigma,e_v=e_v,ini=ini,G_eta=G_eta,n_groups=n_groups,w_g=w_g){
+.dml_cal   <- function(sigma=data$raw_cov,e_v=e_v,ini=ini,G_eta=G_eta,n_groups=n_groups,w_g=w_g){
   mu_v        <- lapply(1:n_groups, function(i_groups) subset(ini$mu_eta[[i_groups]],ini$G_eta))
   sigma_v     <- lapply(1:n_groups, function(i_groups) subset(ini$sigma_eta[[i_groups]],ini$G_eta,ini$G_eta))
   sigma_v_iv  <- lapply(1:n_groups, function(i_groups) solve(sigma_v[[i_groups]]))
