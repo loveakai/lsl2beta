@@ -1,6 +1,9 @@
 # lsl2beta
 
 #### 20170330
+>(try7)</p>
+1. reference class可使用
+2. 修正dml的算法
 >(try6)</p>
 1. 更改多個gamma與delta的ecm的output的排法
 
