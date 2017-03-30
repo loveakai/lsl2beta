@@ -1,9 +1,9 @@
 rm(list=ls())
-set.seed=4869
-library(dplyr);library(gtools)
+set.seed(4869)
+library(dplyr);library(gtools);library(magrittr);library(plyr);library(reshape2)
 
-source('/Volumes/phaksie/Dropbox/lsl2_beta/lsl_tool.R')
-source('/Volumes/phaksie/Dropbox/lsl2_beta/lsl_functions.R')
+source('./lsl_tool.R')
+source('./lsl_functions.R')
 
 model.cfa<-'
 F1=~0.8*x1+0.8*x2+0.8*x3
@@ -21,9 +21,9 @@ x9~~(1-0.8^2)*x9
 F2~~1*F2
 F3~~1*F3
 F1~~1*F1
-F1~~0.4*F2
-F1~~0.4*F3
-F2~~0.4*F3
+F1~~0*F2
+F1~~0*F3
+F2~~0*F3
 '
 
 model.cfa2<-'
@@ -42,9 +42,9 @@ x9~~(1-0.6^2)*x9
 F2~~1*F2
 F3~~1*F3
 F1~~1*F1
-F1~~0.4*F2
-F1~~0.4*F3
-F2~~0.4*F3
+F1~~0*F2
+F1~~0*F3
+F2~~0*F3
 '
 
 
@@ -65,82 +65,80 @@ x9~~(1-0.4^2)*x9
 F2~~1*F2
 F3~~1*F3
 F1~~1*F1
-F1~~0.4*F2
-F1~~0.4*F3
-F2~~0.4*F3
+F1~~0*F2
+F1~~0*F3
+F2~~0*F3
 '
 
-dta       <-list()
-dta[[1]]  <- lavaan::simulateData(model.cfa,sample.nobs = 10L) #%>% cbind(.,sample(c(1,2),size=nrow(.),rep=T))
-dta[[2]]  <- lavaan::simulateData(model.cfa2,sample.nobs = 10L)
-dta[[3]]  <- lavaan::simulateData(model.cfa3,sample.nobs = 10L)
-#dta       <- lavaan::HolzingerSwineford1939[7:15]
 
-n_groups  <- length(dta)
-n_v       <- ncol(dta[[1]])
-n_f       <- 3
-n_eta     <- n_v + n_f
-nm        <- c(paste0("v",1:n_v),paste0("f",1:n_f))
-sigma     <- lapply(1:n_groups, function(i_groups) {dta[[i_groups]] %>% as.matrix %>% crossprod %>% "/"(nrow(dta[[i_groups]])) %>%
-    `colnames<-`(nm[1:n_v]) %>% `rownames<-`(colnames(.))})
-e_v       <- lapply(1:n_groups, function(i_groups) sapply(dta[[i_groups]],mean)[1:n_v] %>% `names<-`(nm[1:n_v]))
+ dta       <-list()
+ dta[[1]]  <- lavaan::simulateData(model.cfa,sample.nobs = 10000L)  %>% cbind(group="g1")#%>% cbind(.,sample(c(1,2),size=nrow(.),rep=T))
+ dta[[2]]  <- lavaan::simulateData(model.cfa2,sample.nobs = 10000L) %>% cbind(group="g2")
+ dta[[3]]  <- lavaan::simulateData(model.cfa3,sample.nobs = 10000L) %>% cbind(group="g3")
+ dta       <- do.call(rbind,dta)
 
 
-lambda <- matrix(NA, 9, 3)
-lambda[c(1,2,3), 1] <- lambda[c(4,5,6), 2] <- lambda[c(7,8,9), 3] <- 1
 
-# beta_p    <- matrix(0, ncol = n_eta, nrow = n_eta) %>% `colnames<-`(nm) %>% `rownames<-`(nm)
-# beta_p[c(1,2,3), 10] <- beta_p[c(4,5,6), 11] <- beta_p[c(7,8,9), 12] <- 1  
-# Beta      <- Beta <- 0.8*.is_one(beta_p) #starting value of Beta
-# Beta[c(2,3), 10] <- Beta[c(5,6), 11] <- Beta[c(8,9), 12] <- 1  
-
-#phi_p     <- matrix(0,n_eta,n_eta)
-#phi_p[c(11,12),10] <- phi_p[c(10,12),11] <- phi_p[c(10,11),12] <- NA
-# Phi       <- matrix(0,n_eta,n_eta)
-# Phi[(n_v+1):n_eta,(n_v+1):n_eta] <- 0.4
-# diag(Phi) <- 1-0.8^2
-# Phi[10,10]<-Phi[11,11]<-Phi[12,12]<-1
-
-#mat       <- matgen(lambda=lambda,Beta = Beta,scale=T)
+#mat       <- matgen(lambda=beta_vf)
 
 
-eta       <- vector(mode = "numeric",n_eta)   %>%`names<-`(nm)
-zeta      <- vector(mode = "numeric",n_eta)   %>%`names<-`(nm)
-ide       <- diag(1, ncol = n_eta, nrow = n_eta)  %>% `colnames<-`(nm) %>% `rownames<-`(nm) 
-G_eta     <- c(rep(T,n_v),rep(F,n_f)) %>%`names<-`(nm)
-v         <- subset(eta,G_eta)
+dta       <- lavaan::HolzingerSwineford1939[7:15]
+data      <- import(dta)
 
-mat       <- matgen(lambda=lambda)
-penalize  <- list(type="L1",delta=0.025,gamma=2.5)
+beta_vf <- matrix(NA, 9, 3)
+beta_vf[c(1,2,3), 1] <- beta_vf[c(4,5,6), 2] <- beta_vf[c(7,8,9), 3] <- 1
+pattern <-list()
+pattern$beta_vf<-beta_vf
+beta_vf <- matrix(0,9,3)
+beta_vf[c(2,3),1]    <- beta_vf[c(5,6),2]    <- beta_vf[c(8,9),3]    <- 1
+beta_vf[1,1]         <- beta_vf[4,2]         <- beta_vf[7,3]         <- 1
+value <-list()
+value$beta_vf<-beta_vf
+model     <- specify(pattern,value)
+#model <- specify(pattern)
 
-pl <-penalize
-
-#ECM
-
-ecmm<-ecm(mat=mat,ide=ide,G_eta=G_eta,maxit=500,cri=10^(-5),penalize=pl)
-
-
-patterngen<-function(alpha_p,beta_p,phi_p,alpha,Beta,Phi,lambda,mat,scale=T){
-  #if (missing(lambda)&&missing(mat)) stop("lambda matrix must be specified")
-  if (missing(mat)) {mat<-matgen(alpha_p,beta_p,phi_p,alpha,Beta,Phi,lambda,mat,scale=T)}
-  pattern=list(
-  alpha_p_v = subset(mat$pattern$alpha_p,G_eta),
-  alpha_p_f = subset(mat$pattern$alpha_p,!G_eta),
-  beta_p_vv = subset(mat$pattern$beta_p,G_eta,G_eta),
-  beta_p_ff = subset(mat$pattern$beta_p,!G_eta,!G_eta),
-  beta_p_vf = subset(mat$pattern$beta_p,G_eta,!G_eta),
-  beta_p_fv = subset(mat$pattern$beta_p,!G_eta,G_eta),
-  phi_p_vv  = subset(mat$pattern$phi_p,G_eta,G_eta),
-  phi_p_ff  = subset(mat$pattern$phi_p,!G_eta,!G_eta),
-  phi_p_vf  = subset(mat$pattern$phi_p,G_eta,!G_eta),
-  phi_p_fv  = subset(mat$pattern$phi_p,!G_eta,G_eta)
-  )
-}
-
-
-specify <- function(pattern,value,difference){
+learn     <- function(penalty,gamma,delta,control=list(max_iter,rel_tol)){
+  if (missing(penalty)) {pl<-"scad"} else {pl<-penalty}
+  if (missing(gamma))   gamma  <-seq(0.025,0.1,0.025)
+  if (missing(delta))   delta  <-c(2.5,5)
+  if (missing(control)) {control<-list(max_iter=500,rel_tol=10^(-5))} else {
+    if (is.null(control$max_iter)) {control$max_iter<-500}
+    if (is.null(control$rel_tol))  {control$rel_tol <-10^(-5)}
+    }
+  mat       <-attributes(model)$mat
+  v_label   <-attributes(model)$labels$v_label
+  f_label   <-attributes(model)$labels$f_label
+  eta_label <-c(v_label,f_label)
+  mat_label <-attributes(model)$labels$mat_label
   
-  if (!exists("beta_vf",pattern)) stop("beta_vf must be specified")
-  if (is.list(pattern)&is.list(value)&is.list(differnence)) stop("arguments must be lists")
+  n_groups  <-attributes(data)$n_groups
+  n_eta     <-attributes(mat)$n_eta
+  n_v       <-attributes(mat)$n_v
+  n_f       <-attributes(mat)$n_f
+  raw_obs   <-data$raw_obs
   
-}
+  ide       <- diag(1, ncol = n_eta, nrow = n_eta)  %>% `colnames<-`(eta_label) %>% `rownames<-`(eta_label) 
+  G_eta     <- c(rep(T,n_v),rep(F,n_f)) %>%`names<-`(eta_label)
+  sigma     <- lapply(1:n_groups, function(i_groups) { data$raw_cov[[i_groups]] + data$raw_mean[[i_groups]] %>% tcrossprod })
+  e_v       <- lapply(1:n_groups, function(i_groups) { data$raw_mean[[i_groups]] })
+  
+  #allpen<-expand.grid(pl=pl,delta=delta,gamma=gamma)
+  
+  indicator <-paste0(model$name,"-",model$matrix,"-",model$group)
+  individual<-array(NA, c(nrow(model),length(gamma),length(delta)),dimnames = list(indicator,paste0("gamma=",gamma),paste0("delta=",delta)))
+  information<-array(NA,c(10,length(gamma),length(delta)),dimnames = list(c("n_par","iter","dml",4:10),paste0("gamma=",gamma),paste0("delta=",delta)))
+  
+  for(q in (1:length(delta))){               
+  for (p in (1:length(gamma))){
+  penalize  <- list(pl=allpen[p,1],delta=allpen[p,2],gamma=allpen[p,3])
+  ecm_output<-ecm(mat=mat,ide=ide,G_eta=G_eta,maxit=control[[1]],cri=control[[2]],penalize=penalize)
+  individual[,p,q]<-ecm_output$theta$value
+  information[[1,p,q]]<-ecm_output$n_par
+  information[[2,p,q]]<-ecm_output$iteration
+  information[[3,p,q]]<-ecm_output$dml
+  }
+  }
+
+
+  return(learned) 
+} 
