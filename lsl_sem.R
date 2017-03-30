@@ -24,7 +24,7 @@ lslSEM <- methods::setRefClass(Class = "lslSEM",
                                        if (missing(var_subset)) {
                                          var_subset <- 1:ncol(raw_obs)
                                        }
-                                       raw_obs %<>% .[obs_subset, ] 
+                                       raw_obs %<>% .[obs_subset,var_subset] 
                                        if (is.null(colnames(raw_obs))) colnames(raw_obs)<-paste0("v",1:ncol(raw_obs))
                                        raw_obs %<>% cbind(group=1)
                                        var_group <-ncol(raw_obs)
@@ -93,9 +93,9 @@ lslSEM <- methods::setRefClass(Class = "lslSEM",
                                  },
                                  
                                  learn = function(penalty,gamma,delta,control=list(max_iter,rel_tol)){
-                                   if (missing(penalty)) {pl<-"scad"} else {pl<-penalty}
+                                   if (missing(penalty)) {pl<-"l1"} else {pl<-penalty}
                                    if (missing(gamma))   gamma  <-seq(0.025,0.1,0.025)
-                                   if (missing(delta))   delta  <-c(2.5,5)
+                                   if (missing(delta))   delta  <-c(2.5)
                                    if (missing(control)) {control<-list(max_iter=500,rel_tol=10^(-5))} else {
                                      if (is.null(control$max_iter)) {control$max_iter<-500}
                                      if (is.null(control$rel_tol))  {control$rel_tol <-10^(-5)}

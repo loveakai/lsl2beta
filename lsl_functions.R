@@ -346,7 +346,7 @@
   inival   <-as.numeric(levels(output$value)[output$value])
   
   for (it in 1:maxit){
-    cat("...",it)
+    #cat("...",it)
     e_step    <- .estep(ini,data=data)
     cm_step   <- .cmstep(w_g=w_g,JK=JK,JLK=JLK,mat=ini$mat,e_step=e_step,type=type,gamma=gamma,delta=delta,data=data)
     ini$mat$value$phi_r   <- phi_r     <- cm_step$phi_r
