@@ -1,59 +1,59 @@
 import    <- function(raw_obs,var_subset,var_group,obs_subset,obs_weight,raw_cov,raw_mean,obs_size) {
-    if (missing(raw_obs)) {
-      if (is.list(raw_cov)) {
+  if (missing(raw_obs)) {
+    if (is.list(raw_cov)) {
       output<-list(raw_cov = raw_cov, raw_mean = raw_mean)
-      } else {
-        output<-list(raw_cov = list(raw_cov),raw_mean=list(raw_mean))
-      }
-      if (!missing(obs_size)) {attr(output,"obs_size")<-obs_size}
-    }  else {
-      if (!is.data.frame(raw_obs)) {
-        as.data.frame(raw_obs)
-        }
-      if (missing(obs_subset)) {
-        obs_subset <- 1:nrow(raw_obs)
-      }
-      if (missing(var_group)) {
-        if (missing(var_subset)) {
-          var_subset <- 1:ncol(raw_obs)
-        }
-        raw_obs %<>% .[obs_subset, ] 
-        if (is.null(colnames(raw_obs))) colnames(raw_obs)<-paste0("v",1:ncol(raw_obs))
-        raw_obs %<>% cbind(group=1)
-        var_group <-ncol(raw_obs)
-      } else {
-        if (is.character(var_group)) {
-          var_group <- which(colnames(raw_obs)%in%(var_group))
-        }
-        if (missing(var_subset)) {
-          var_subset <- (1:ncol(raw_obs)) %>% .[!. %in% var_group]
-        }
-        raw_o   <- raw_obs[obs_subset,var_subset]
-        if (is.null(colnames(raw_o))) colnames(raw_o)<-paste0("v",1:ncol(raw_o))
-        raw_obs <- cbind(raw_o,group=raw_obs[,var_group])
-      }
-      output<-list(
-        raw_obs = raw_obs,
-        raw_cov = split(raw_obs, raw_obs[,ncol(raw_obs)]) %>% lapply(function(x) {
-          cov(x[, -ncol(x)])
-        }),
-        raw_mean = split(raw_obs, raw_obs[,ncol(raw_obs)]) %>% lapply(function(x) {
-          apply(x[, -ncol(x)], 2, mean)
-        })
-      )
-      attr(output,"obs_size")  <- plyr::count(raw_obs[,ncol(raw_obs)]) %>% .[,2]
-      
+    } else {
+      output<-list(raw_cov = list(raw_cov),raw_mean=list(raw_mean))
     }
-    attr(output,"n_groups") <- output$raw_cov %>% length
-    if (!is.null(colnames(output$raw_cov[[1]]))) {
-      attr(output,"v_label")<-colnames(output$raw_cov[[1]])
+    if (!missing(obs_size)) {attr(output,"obs_size")<-obs_size}
+  }  else {
+    if (!is.data.frame(raw_obs)) {
+      as.data.frame(raw_obs)
     }
-    attr(output,"g_label")<-unique(raw_obs[,ncol(raw_obs)]) %>% as.character
-    return(output)
+    if (missing(obs_subset)) {
+      obs_subset <- 1:nrow(raw_obs)
+    }
+    if (missing(var_group)) {
+      if (missing(var_subset)) {
+        var_subset <- 1:ncol(raw_obs)
+      }
+      raw_obs %<>% .[obs_subset, ] 
+      if (is.null(colnames(raw_obs))) colnames(raw_obs)<-paste0("v",1:ncol(raw_obs))
+      raw_obs %<>% cbind(group=1)
+      var_group <-ncol(raw_obs)
+    } else {
+      if (is.character(var_group)) {
+        var_group <- which(colnames(raw_obs)%in%(var_group))
+      }
+      if (missing(var_subset)) {
+        var_subset <- (1:ncol(raw_obs)) %>% .[!. %in% var_group]
+      }
+      raw_o   <- raw_obs[obs_subset,var_subset]
+      if (is.null(colnames(raw_o))) colnames(raw_o)<-paste0("v",1:ncol(raw_o))
+      raw_obs <- cbind(raw_o,group=raw_obs[,var_group])
+    }
+    output<-list(
+      raw_obs = raw_obs,
+      raw_cov = split(raw_obs, raw_obs[,ncol(raw_obs)]) %>% lapply(function(x) {
+        cov(x[, -ncol(x)])
+      }),
+      raw_mean = split(raw_obs, raw_obs[,ncol(raw_obs)]) %>% lapply(function(x) {
+        apply(x[, -ncol(x)], 2, mean)
+      })
+    )
+    attr(output,"obs_size")  <- plyr::count(raw_obs[,ncol(raw_obs)]) %>% .[,2]
+    
   }
+  attr(output,"n_groups") <- output$raw_cov %>% length
+  if (!is.null(colnames(output$raw_cov[[1]]))) {
+    attr(output,"v_label")<-colnames(output$raw_cov[[1]])
+  }
+  attr(output,"g_label")<-unique(raw_obs[,ncol(raw_obs)]) %>% as.character
+  return(output)
+}
 
 matgen    <- function(pattern,value,n_groups,scale,labels,ref_group){ #**diminfo could be modified
-
+  
   #pattern matarices generation
   #only 3 matrices have pattern matrix, including alpha, beta, Phi
   
@@ -74,7 +74,7 @@ matgen    <- function(pattern,value,n_groups,scale,labels,ref_group){ #**diminfo
   if(exists("beta_fv",pattern)){
     beta_p[(n_v+1):n_eta,(1:n_v)]        <- pattern$beta_fv
   }
-
+  
   alpha_p                                <- c(rep(1,n_v),rep(0,n_f))
   if(exists("alpha_v",pattern)){
     alpha_p[1:n_v]                       <- pattern$alpha_v
@@ -91,14 +91,14 @@ matgen    <- function(pattern,value,n_groups,scale,labels,ref_group){ #**diminfo
   if(exists("phi_vv",pattern)){
     phi_p[(1:n_v),(1:n_v)]               <- pattern$phi_vv
   }
-
-
+  
+  
   #matrices generation
   ## reference component
   if(missing(value)){
-  alpha_r <- c(data$raw_mean[[1]],rep(0,n_f))
-  beta_r  <- 1 *.is_one(beta_p)
-  phi_r   <- diag(0,n_eta,n_eta)
+    alpha_r <- c(data$raw_mean[[1]],rep(0,n_f))
+    beta_r  <- 1 *.is_one(beta_p)
+    phi_r   <- diag(0,n_eta,n_eta)
   } else {
     
     alpha_r                                <- c(data$raw_mean[[1]],rep(0,n_f))
@@ -122,7 +122,7 @@ matgen    <- function(pattern,value,n_groups,scale,labels,ref_group){ #**diminfo
     if(exists("beta_fv",value)){
       beta_r[(n_v+1):n_eta,(1:n_v)]        <- value$beta_fv
     }
- 
+    
     phi_r                                  <- diag(0,n_eta,n_eta)
     if(exists("phi_ff",value)){
       phi_r[(n_v+1):n_eta,(n_v+1):n_eta]   <- value$phi_ff
@@ -135,7 +135,7 @@ matgen    <- function(pattern,value,n_groups,scale,labels,ref_group){ #**diminfo
   
   names(alpha_p)    <-colnames(beta_p)   <- rownames(beta_p)  <- colnames(phi_p)  <-rownames(phi_p)      <- nm
   rownames(phi_r)   <-colnames(phi_r)    <- rownames(beta_r)  <- colnames(beta_r) <-names(alpha_r)       <- nm
- 
+  
   if (scale) {beta_p[apply(beta_p[(1:n_v),(n_v+1):n_eta] == 1, 2, function(x) min(which(x))) %>% cbind((n_v+1):n_eta)] <- 0}　
   
   ## increment component
@@ -196,7 +196,7 @@ specify   <- function(pattern,value,difference,ref_group,auto_scale=T,v_label,f_
     type   <-as.numeric(levels(type)[type])
     rm(value)
   })
-
+  
   output   <-output[!(output$matrix=="phi"&(output$row>output$col)),]
   #attr(output,"matinfo") <- attributes(mat)
   attr(output,"mat")<-mat
@@ -205,7 +205,7 @@ specify   <- function(pattern,value,difference,ref_group,auto_scale=T,v_label,f_
 }
 
 threshold <- function(theta,gma){
-   sign(theta)*max(abs(theta)-gma,0) 
+  sign(theta)*max(abs(theta)-gma,0) 
 }
 
 varphi    <- function(x,Phi) {diag(Phi)[x]-Phi[x,-x]%*%solve(Phi[-x,-x])%*%Phi[-x,x]}
@@ -257,11 +257,7 @@ cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,mat=ini$mat,e_step=e_step,type=type,
   alpha_i   <- mat$value$alpha_i
   n_eta     <- length(mat$pattern$alpha_p)
   n_groups  <- attributes(data)$n_groups
-<<<<<<< HEAD
-
-=======
   
->>>>>>> fa76c8d4f00032301f98fbbaf2e3f02932fa1d70
   ## reference components updating
   
   # alpha
@@ -382,11 +378,6 @@ cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,mat=ini$mat,e_step=e_step,type=type,
               phi_i=phi_i))
 } 
 
-<<<<<<< HEAD
-ecm       <- function(mat=mat,maxit,cri,penalize){
-
-=======
->>>>>>> fa76c8d4f00032301f98fbbaf2e3f02932fa1d70
 
 ecm       <- function(mat=mat,maxit,cri,penalize){
   
@@ -490,7 +481,7 @@ dml_cal   <- function(sigma=sigma,e_v=e_v,ini=ini,G_eta=G_eta,n_groups=n_groups,
     })  +
       sapply(1:n_groups, function(i_groups) {
         w_g[[i_groups]] * (t(e_v[[i_groups]] - mu_v[[i_groups]]) %*% sigma_v_iv[[i_groups]] %*% (e_v[[i_groups]] -
-                                                                                                    mu_v[[i_groups]]))
+                                                                                                   mu_v[[i_groups]]))
       })) %>% sum
   return(dml)
 }

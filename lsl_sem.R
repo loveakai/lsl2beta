@@ -71,11 +71,11 @@ F2~~0*F3
 '
 
 
- dta       <-list()
- dta[[1]]  <- lavaan::simulateData(model.cfa,sample.nobs = 10000L)  %>% cbind(group="g1")#%>% cbind(.,sample(c(1,2),size=nrow(.),rep=T))
- dta[[2]]  <- lavaan::simulateData(model.cfa2,sample.nobs = 10000L) %>% cbind(group="g2")
- dta[[3]]  <- lavaan::simulateData(model.cfa3,sample.nobs = 10000L) %>% cbind(group="g3")
- dta       <- do.call(rbind,dta)
+dta       <-list()
+dta[[1]]  <- lavaan::simulateData(model.cfa,sample.nobs = 10000L)  %>% cbind(group="g1")#%>% cbind(.,sample(c(1,2),size=nrow(.),rep=T))
+dta[[2]]  <- lavaan::simulateData(model.cfa2,sample.nobs = 10000L) %>% cbind(group="g2")
+dta[[3]]  <- lavaan::simulateData(model.cfa3,sample.nobs = 10000L) %>% cbind(group="g3")
+dta       <- do.call(rbind,dta)
 
 
 
@@ -96,36 +96,4 @@ value <-list()
 value$beta_vf<-beta_vf
 model     <- specify(pattern,value)
 
-<<<<<<< HEAD
-learn     <- function(penalty,gamma,delta,control=list(max_iter,rel_tol)){
-  if (missing(penalty)) {pl<-"scad"} else {pl<-penalty}
-  if (missing(gamma))   gamma  <-seq(0.025,0.1,0.025)
-  if (missing(delta))   delta  <-c(2.5,5)
-  if (missing(control)) {control<-list(max_iter=500,rel_tol=10^(-5))} else {
-    if (is.null(control$max_iter)) {control$max_iter<-500}
-    if (is.null(control$rel_tol))  {control$rel_tol <-10^(-5)}
-    }
-  mat       <-attributes(model)$mat
-  
-  
-  #allpen<-expand.grid(pl=pl,delta=delta,gamma=gamma)
-  
-  indicator <-paste0(model$name,"-",model$matrix,"-",model$group)
-  individual<-array(NA, c(nrow(model),length(gamma),length(delta)),dimnames = list(indicator,paste0("gamma=",gamma),paste0("delta=",delta)))
-  information<-array(NA,c(10,length(gamma),length(delta)),dimnames = list(c("n_par","iter","dml",4:10),paste0("gamma=",gamma),paste0("delta=",delta)))
-  
-  for(q in (1:length(delta))){               
-  for (p in (1:length(gamma))){
-  penalize  <- list(pl=pl,delta=delta[q],gamma=gamma[p])
-  ecm_output<-ecm(mat=mat,maxit=control[[1]],cri=control[[2]],penalize=penalize)
-  individual[,p,q]<-ecm_output$theta$value
-  information[[1,p,q]]<-ecm_output$n_par
-  information[[2,p,q]]<-ecm_output$iteration
-  information[[3,p,q]]<-ecm_output$dml
-  }
-  }
-  return(list(individual=individual,information=information)) 
-} 
-=======
 learn()
->>>>>>> fa76c8d4f00032301f98fbbaf2e3f02932fa1d70
