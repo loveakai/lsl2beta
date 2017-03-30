@@ -95,8 +95,8 @@ beta_vf[1,1]         <- beta_vf[4,2]         <- beta_vf[7,3]         <- 1
 value <-list()
 value$beta_vf<-beta_vf
 model     <- specify(pattern,value)
-#model <- specify(pattern)
 
+<<<<<<< HEAD
 learn     <- function(penalty,gamma,delta,control=list(max_iter,rel_tol)){
   if (missing(penalty)) {pl<-"scad"} else {pl<-penalty}
   if (missing(gamma))   gamma  <-seq(0.025,0.1,0.025)
@@ -126,3 +126,6 @@ learn     <- function(penalty,gamma,delta,control=list(max_iter,rel_tol)){
   }
   return(list(individual=individual,information=information)) 
 } 
+=======
+learn()
+>>>>>>> fa76c8d4f00032301f98fbbaf2e3f02932fa1d70
