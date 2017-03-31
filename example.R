@@ -1,10 +1,22 @@
-
 rm(list=ls())
 set.seed(4869)
 library(dplyr);library(gtools);library(magrittr);library(plyr);library(reshape2)
 
 source('./lsl_functions.R')
 source('./lsl_sem.R')
+
+beta_vf <- matrix(NA, 9, 3)
+beta_vf[c(1,2,3), 1] <- beta_vf[c(4,5,6), 2] <- beta_vf[c(7,8,9), 3] <- 1
+alpha_v<-c(rep(0.1,9))
+
+dta       <- lavaan::HolzingerSwineford1939
+
+rc_sem <- lslSEM()
+rc_sem$import(raw_obs=dta,var_subset = c(7:15))
+#rc_sem$specify(pattern = list(beta_vf = beta_vf),value = list(alpha_v=alpha_v))
+rc_sem$specify(pattern = list(beta_vf = beta_vf))
+rc_sem$learn(penalty="scad")
+
 
 model.cfa<-'
 F1=~0.8*x1+0.8*x2+0.8*x3
@@ -79,13 +91,7 @@ dta[[3]]  <- lavaan::simulateData(model.cfa3,sample.nobs = 10000L) %>% cbind(gro
 dta       <- do.call(rbind,dta)
 
 
-
-beta_vf <- matrix(NA, 9, 3)
-beta_vf[c(1,2,3), 1] <- beta_vf[c(4,5,6), 2] <- beta_vf[c(7,8,9), 3] <- 1
-
-dta       <- lavaan::HolzingerSwineford1939
-
-rc_sem <- lslSEM()
-rc_sem$import(raw_obs=dta,var_subset = c(7:15))
-rc_sem$specify(pattern = list(beta_vf = beta_vf))
-rc_sem$learn(penalty="scad")
+rc_sem2 <- lslSEM()
+rc_sem2$import(raw_obs=dta,var_group=10)
+rc_sem2$specify(pattern = list(beta_vf = beta_vf),ref_group = "g2")
+rc_sem2$learn(penalty="mcp")

@@ -42,7 +42,7 @@
   #matrices generation
   ## reference component
   if(missing(value)){
-    alpha_r <- c(data$raw_mean[[1]],rep(0,n_f))
+    alpha_r <- c(data$raw_mean[[nm_g[[1]]]],rep(0,n_f))
     beta_r  <- 1 *.is_one(beta_p)
     phi_r   <- diag(0,n_eta,n_eta)
   } else {
@@ -56,7 +56,7 @@
     }
     
     beta_r  <- 1 *.is_one(beta_p)
-    if(exists("beta_vf")){
+    if(exists("beta_vf",value)){
       beta_r[(1:n_v),(n_v+1):n_eta]        <- value$beta_vf
     }
     if(exists("beta_ff",value)){
@@ -85,7 +85,7 @@
   if (scale) {beta_p[apply(beta_p[(1:n_v),(n_v+1):n_eta] == 1, 2, function(x) min(which(x))) %>% cbind((n_v+1):n_eta)] <- 0}　
   
   ## increment component
-  alpha_i<-rep(list(0*alpha_r),n_groups)
+  alpha_i<-lapply(data$raw_mean, function(x) {c(x,rep(0,n_f))-alpha_r})[c(ref_group,(1:n_groups)[-ref_group])]
   beta_i <-rep(list(0*beta_r),n_groups)
   
   g<-0.1*diag(ncol(phi_r))
@@ -293,7 +293,7 @@
 
 .ecm       <- function(mat=mat,maxit,cri,penalize,model=model,data=data){
   
-  alpha_p   <- mat$pattern$alpha_p
+  alpha_p   <- mat$pattern$alpha_p 
   beta_p    <- mat$pattern$beta_p
   phi_p     <- mat$pattern$phi_p
   alpha_r   <- mat$value$alpha_r
@@ -376,7 +376,12 @@
   dml<-.dml_cal(sigma=data$raw_cov,e_v=e_v,ini=ini,G_eta=G_eta,n_groups=n_groups,w_g=w_g)
   
   
-  return(list(theta=output,dml=dml,penalize=penalize,iteration=it,n_par=n_par))
+  return(list(individual=output$value,overall=list(pl=type,
+                                                   gamma=gamma,
+                                                   delta=delta,
+                                                   iteration=it,
+                                                   n_par=n_par,
+                                                   dml=dml)))
   
 }
 
