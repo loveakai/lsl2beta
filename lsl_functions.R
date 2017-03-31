@@ -47,7 +47,7 @@
     phi_r   <- diag(0,n_eta,n_eta)
   } else {
     
-    alpha_r                                <- c(data$raw_mean[[1]],rep(0,n_f))
+    alpha_r                                <- c(data$raw_mean[[nm_g[[1]]]],rep(0,n_f))
     if(exists("alpha_v",value)){
       alpha_r[1:n_v]                       <- value$alpha_v
     }
@@ -431,6 +431,3 @@ invspecify<- function(model, value) {
   x <- !is.na(x) & x == 1
   return(x)
 }
-
-
-

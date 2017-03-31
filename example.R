@@ -7,7 +7,6 @@ source('./lsl_sem.R')
 
 beta_vf <- matrix(NA, 9, 3)
 beta_vf[c(1,2,3), 1] <- beta_vf[c(4,5,6), 2] <- beta_vf[c(7,8,9), 3] <- 1
-alpha_v<-c(rep(0.1,9))
 
 dta       <- lavaan::HolzingerSwineford1939
 
