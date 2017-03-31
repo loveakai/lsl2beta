@@ -2,8 +2,9 @@
 
 #### 20170331
 >(try7)</p>
-1. 修改knowledge的格式（由array轉換為list）
-2. 修改alpha的起始值（alpha_r為ref_group的平均，alpha_i第一組為0，其他組為跟ref_group的差值）
+1. 修改knowledge的格式（由array轉換為list)
+2. learn的ecm算法由double loop改成lapply（但速度沒有變快）
+3. 修改alpha的起始值（alpha_r為ref_group的平均，alpha_i第一組為0，其他組為跟ref_group的差值）
 
 #### 20170330
 >(try7)</p>
