@@ -9,8 +9,8 @@
   nm        <- c(labels$v_label,labels$f_label)
   nm_g      <- attributes(data)$g_label[c(ref_group,(1:n_groups)[-ref_group])]
   
-  beta_p                          <- matrix(0, ncol = n_eta, nrow = n_eta)
-  beta_p[(1:n_v),(n_v+1):n_eta]   <- pattern$beta_vf
+  beta_p                                 <- matrix(0, ncol = n_eta, nrow = n_eta)
+  beta_p[(1:n_v),(n_v+1):n_eta]          <- pattern$beta_vf
   if(exists("beta_ff",pattern)){
     beta_p[(n_v+1):n_eta,(n_v+1):n_eta]  <- pattern$beta_ff
   }
@@ -77,7 +77,6 @@
       phi_r[(1:n_v),(1:n_v)]               <- value$phi_vv
     }
   }
-  
   
   names(alpha_p)    <-colnames(beta_p)   <- rownames(beta_p)  <- colnames(phi_p)  <-rownames(phi_p)      <- nm
   rownames(phi_r)   <-colnames(phi_r)    <- rownames(beta_r)  <- colnames(beta_r) <-names(alpha_r)       <- nm

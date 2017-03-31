@@ -62,7 +62,6 @@ lslSEM <- methods::setRefClass(Class = "lslSEM",
                                  specify = function(pattern,value,difference,ref_group,auto_scale=T,v_label,f_label){
                                    
                                    if (!exists("beta_vf",pattern)) stop("beta_vf must be specified")
-                                   #if (!(is.list(pattern)&is.list(value)&is.list(difference))) stop("arguments must be lists")
                                    if (missing(v_label)) {v_label<-attributes(data)$v_label} 
                                    if (missing(f_label)) {f_label<-paste0("f",1:ncol(pattern$beta_vf))}
                                    if (missing(ref_group)) {ref_group<-1L}
@@ -104,22 +103,6 @@ lslSEM <- methods::setRefClass(Class = "lslSEM",
                                    mat       <-attributes(model)$mat
                                    allpen<-expand.grid(pl=pl,delta=delta,gamma=gamma)
                                    
-                                   # indicator <-paste0(model$name,"-",model$matrix,"-",model$group)
-                                   # individual<-array(NA, c(nrow(model),length(gamma),length(delta)),dimnames = list(indicator,paste0("gamma=",gamma),paste0("delta=",delta)))
-                                   # information<-array(NA,c(10,length(gamma),length(delta)),dimnames = list(c("n_par","iter","dml",4:10),paste0("gamma=",gamma),paste0("delta=",delta)))
-                                   # 
-                                   # for(q in (1:length(delta))){               
-                                   #   for (p in (1:length(gamma))){
-                                   #     penalize  <- list(pl=pl,delta=delta[q],gamma=gamma[p])
-                                   #     ecm_output<-.ecm(mat=mat,maxit=control[[1]],cri=control[[2]],penalize=penalize,model=model,data=data)
-                                   #     individual[,p,q]<-ecm_output$theta$value
-                                   #     information[[1,p,q]]<-ecm_output$n_par
-                                   #     information[[2,p,q]]<-ecm_output$iteration
-                                   #     information[[3,p,q]]<-ecm_output$dml
-                                   #   }
-                                   # }
-                                   #knowledge<<-individual
-                                   #knowledge$information<<-information
                                    knowledge<<-lapply(1:nrow(allpen),function(x) {penalize<-list(pl=pl,delta=allpen[x,2],gamma=allpen[x,3])
                                    .ecm(mat = mat,maxit=control[[1]],cri=control[[2]],penalize=penalize,model=model,data=data)})
                                  }
