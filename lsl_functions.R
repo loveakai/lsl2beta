@@ -85,6 +85,7 @@
   
   ## increment component
   alpha_i<-lapply(data$raw_mean, function(x) {c(x,rep(0,n_f))-alpha_r})[c(ref_group,(1:n_groups)[-ref_group])]
+  #alpha_i<-rep(list(rep(0,n_eta)),n_groups)
   beta_i <-rep(list(0*beta_r),n_groups)
   
   g<-0.1*diag(ncol(phi_r))
@@ -102,7 +103,7 @@
 }
 
 .getpar    <- function(pattern,value,v_label,f_label,mat_label,group){
-  mapply(function(ma,val,pat,p,v,co,ro,nm) {
+  pars<-mapply(function(ma,val,pat,p,v,co,ro,nm) {
     rbind(nm[p|v],ma,group,ro[p|v],co[p|v],pat[p|v],val[p|v]) %>% 
       `rownames<-`(c("name","matrix","group","row","col","type","value"))},
     val=lapply(value,as.matrix),
@@ -113,8 +114,14 @@
     ro=lapply(pattern,function(x) {as.matrix(x) %>% row}),
     nm=list(c(v_label,f_label),mat_label,mat_label) %>% lapply(as.matrix),
     ma=list("alpha","beta","phi")) %>% 
-    `names<-`(c("alpha","beta","phi")) %>% lapply(.,t)
-}
+    `names<-`(c("alpha","beta","phi")) %>% lapply(.,t) %>% do.call(rbind,.)
+   within(as.data.frame(pars),{
+     col    <-as.numeric(levels(col)[col])
+     row    <-as.numeric(levels(row)[row])
+     value  <-as.numeric(levels(value)[value])
+     type   <-as.numeric(levels(type)[type])
+   }) %>% return
+  }
 
 .threshold <- function(theta,gma){
   sign(theta)*max(abs(theta)-gma,0) 
@@ -332,19 +339,19 @@
   JLK       <- expand.grid(1:(n_eta-1),1:n_eta)[2:1]
   
   ini       <- list(IBinv=IBinv,mu_eta=mu_eta,sigma_eta=sigma_eta,c_v=c_v,G_eta=G_eta,e_v=e_v,mat=mat)
-  ref      <- .getpar(pattern = ini$mat$pattern,value = list(ini$mat$value$alpha_r,ini$mat$value$beta_r,ini$mat$value$phi_r),v_label,f_label,mat_label,group="r") %>% do.call(rbind,.)
-  inc      <- lapply((1:n_groups),function(x){
-    .getpar(pattern = ini$mat$pattern, value = list(ini$mat$value$alpha_i[[x]],ini$mat$value$beta_i[[x]],ini$mat$value$phi_i[[x]]),v_label,f_label,mat_label,group=names(ini$mat$value$alpha_i[x])) %>% do.call(rbind,.)
-  } ) %>% do.call(rbind,.) %>% rbind(ref,.) %>% as.data.frame
-  output   <- within(inc,{
-    col    <-as.numeric(levels(col)[col])
-    row    <-as.numeric(levels(row)[row])
-  })
+  ref      <- .getpar(pattern = ini$mat$pattern,value = list(ini$mat$value$alpha_r,ini$mat$value$beta_r,ini$mat$value$phi_r),v_label,f_label,mat_label,group="r")
+  output      <- lapply((1:n_groups),function(x){
+    .getpar(pattern = ini$mat$pattern, value = list(ini$mat$value$alpha_i[[x]],ini$mat$value$beta_i[[x]],ini$mat$value$phi_i[[x]]),v_label,f_label,mat_label,group=names(ini$mat$value$alpha_i[x]))
+  } ) %>% do.call(rbind,.) %>% rbind(ref,.)
   output   <-output[!(output$matrix=="phi"&(output$row>output$col)),]
-  inival   <-as.numeric(levels(output$value)[output$value])
+  inival   <-output$value
   
   for (it in 1:maxit){
+    
     #cat("...",it)
+    mod10<-ifelse(mod(it,75)==0,75,mod(it,75))
+    print(noquote(pic[mod10]))
+    
     e_step    <- .estep(ini,data=data)
     cm_step   <- .cmstep(w_g=w_g,JK=JK,JLK=JLK,mat=ini$mat,e_step=e_step,type=type,gamma=gamma,delta=delta,data=data)
     ini$mat$value$phi_r   <- phi_r     <- cm_step$phi_r
@@ -356,22 +363,23 @@
     ini$IBinv             <- lapply(1:n_groups, function(i_groups) solve(ide-(beta_r+beta_i[[i_groups]])))
     ini$mu_eta            <- lapply(1:n_groups, function(i_groups) ini$IBinv[[i_groups]]%*%(alpha_r+alpha_i[[i_groups]]))
     ini$sigma_eta         <- lapply(1:n_groups, function(i_groups) ini$IBinv[[i_groups]]%*%(phi_r+phi_i[[i_groups]])%*%t(ini$IBinv[[i_groups]]))
-    ref      <- .getpar(pattern = ini$mat$pattern,value = list(ini$mat$value$alpha_r,ini$mat$value$beta_r,ini$mat$value$phi_r),v_label,f_label,mat_label,group="r") %>% do.call(rbind,.)
+    ref      <- .getpar(pattern = ini$mat$pattern,value = list(ini$mat$value$alpha_r,ini$mat$value$beta_r,ini$mat$value$phi_r),v_label,f_label,mat_label,group="r")
     inc      <- lapply((1:n_groups),function(x){
-      .getpar(pattern = ini$mat$pattern, value = list(ini$mat$value$alpha_i[[x]],ini$mat$value$beta_i[[x]],ini$mat$value$phi_i[[x]]),v_label,f_label,mat_label,group=names(ini$mat$value$alpha_i[x])) %>% do.call(rbind,.)
-    } ) %>% do.call(rbind,.) %>% rbind(ref,.) %>% as.data.frame
-    output   <- within(inc,{
-      col    <-as.numeric(levels(col)[col])
-      row    <-as.numeric(levels(row)[row])
-      value  <-as.numeric(levels(value)[value])
-    })
+      .getpar(pattern = ini$mat$pattern, value = list(ini$mat$value$alpha_i[[x]],ini$mat$value$beta_i[[x]],ini$mat$value$phi_i[[x]]),v_label,f_label,mat_label,group=names(ini$mat$value$alpha_i[x]))
+    } ) %>% do.call(rbind,.) %>% rbind(ref,.) 
+    output<-inc
     output   <-output[!(output$matrix=="phi"&(output$row>output$col)),]
     newval   <-output$value
     if (sum((newval-inival)^2)<cri) {break} else {inival<-newval} 
   }
   
   output_par<-output[.is_one(output$type)|(output$type==0&output$value!=0)|(is.na(output$type)&output$value!=0),]
-  n_par<-nrow(output_par[.is_est(output_par$type),])
+  q<-output_par[.is_est(output_par$type),]
+  ref_group<-attributes(model)$ref_group
+  n_ref<-nrow(q[(q$group=="r")&!((q$matrix=="phi")&(q$row==q$col)),])
+  n_inc1<-nrow(q[(q$group!="r")&(q$group!=ref_group),])
+  n_inc2<-nrow(q[(q$group==ref_group)&((q$matrix=="phi")&(q$col==q$row)),])
+  n_par<-n_ref+n_inc1+n_inc2
   dml<-.dml_cal(sigma=data$raw_cov,e_v=e_v,ini=ini,G_eta=G_eta,n_groups=n_groups,w_g=w_g)
   
   

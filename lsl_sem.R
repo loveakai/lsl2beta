@@ -73,21 +73,18 @@ lslSEM <- methods::setRefClass(Class = "lslSEM",
                                    n_groups <- attributes(data)$n_groups
                                    
                                    mat      <- .matgen(pattern,value,n_groups = n_groups,labels=labels,scale=auto_scale,ref_group=ref_group,data=data)
-                                   ref      <- .getpar(pattern = mat$pattern,value = list(mat$value$alpha_r,mat$value$beta_r,mat$value$phi_r),v_label,f_label,mat_label,group="r") %>% do.call(rbind,.)
+                                   ref      <- .getpar(pattern = mat$pattern,value = list(mat$value$alpha_r,mat$value$beta_r,mat$value$phi_r),v_label,f_label,mat_label,group="r")
                                    inc      <- lapply((1:n_groups),function(x){
-                                     .getpar(pattern = mat$pattern, value = list(mat$value$alpha_i[[x]],mat$value$beta_i[[x]],mat$value$phi_i[[x]]),v_label,f_label,mat_label,group=names(mat$value$alpha_i[x])) %>% do.call(rbind,.)
-                                   } ) %>% do.call(rbind,.) %>% rbind(ref,.) %>% as.data.frame
+                                     .getpar(pattern = mat$pattern, value = list(mat$value$alpha_i[[x]],mat$value$beta_i[[x]],mat$value$phi_i[[x]]),v_label,f_label,mat_label,group=names(mat$value$alpha_i[x]))
+                                   } ) %>% do.call(rbind,.) %>% rbind(ref,.)
                                    output   <- within(inc,{
-                                     col    <-as.numeric(levels(col)[col])
-                                     row    <-as.numeric(levels(row)[row])
-                                     initial<-as.numeric(levels(value)[value])
-                                     type   <-as.numeric(levels(type)[type])
                                      rm(value)
                                    })
                                    
                                    output   <-output[!(output$matrix=="phi"&(output$row>output$col)),]
                                    attr(output,"mat")<-mat
                                    attr(output,"labels")<-labels
+                                   attr(output,"ref_group")<-attributes(data)$g_label[ref_group]
                                    model<<-output
                                  },
                                  
