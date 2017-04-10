@@ -376,25 +376,38 @@
   output_par<-output[.is_one(output$type)|(output$type==0&output$value!=0)|(is.na(output$type)&output$value!=0),]
   q<-output_par[.is_est(output_par$type),]
   ref_group<-attributes(model)$ref_group
+  
+  #n_par counting
   n_ref<-nrow(q[(q$group=="r")&!((q$matrix=="phi")&(q$row==q$col)),])
   n_inc1<-nrow(q[(q$group!="r")&(q$group!=ref_group),])
   n_inc2<-nrow(q[(q$group==ref_group)&((q$matrix=="phi")&(q$col==q$row)),])
   n_par<-n_ref+n_inc1+n_inc2
-  dml<-.dml_cal(sigma=data$raw_cov,e_v=e_v,ini=ini,G_eta=G_eta,n_groups=n_groups,w_g=w_g)
+
+  dml<-.dml_cal(sigma=data$raw_cov,
+                e_v=e_v,
+                mu_v=lapply(1:n_groups, function(i_groups) subset(ini$mu_eta[[i_groups]],G_eta)),
+                sigma_v=lapply(1:n_groups, function(i_groups) subset(ini$sigma_eta[[i_groups]],G_eta,G_eta)),
+                n_groups=n_groups,
+                w_g=w_g)
+  dml_b<-.dml_cal(sigma=data$raw_cov,
+                    e_v=e_v,
+                    mu_v=lapply((1:n_groups),function(i_groups) as.matrix(e_v[[i_groups]])),
+                    sigma_v=lapply((1:n_groups),function(i_groups) diag(diag(data$raw_cov[[i_groups]]))),
+                    n_groups=n_groups,
+                    w_g=w_g)
   
   
-  return(list(individual=output$value,overall=list(pl=type,
-                                                   gamma=gamma,
-                                                   delta=delta,
-                                                   iteration=it,
-                                                   n_par=n_par,
-                                                   dml=dml)))
+  df<- (n_v)*(n_v+3)/2-n_par
+  
+  
+  
+  return(list(parameter=output$value,
+              optimization=list(pl=type, gamma=gamma, delta=delta, iteration=it, n_par=n_par, dml=dml),
+              goodness=list(df=df,dml_obs=dml_obs)))
   
 }
 
-.dml_cal   <- function(sigma=data$raw_cov,e_v=e_v,ini=ini,G_eta=G_eta,n_groups=n_groups,w_g=w_g){
-  mu_v        <- lapply(1:n_groups, function(i_groups) subset(ini$mu_eta[[i_groups]],ini$G_eta))
-  sigma_v     <- lapply(1:n_groups, function(i_groups) subset(ini$sigma_eta[[i_groups]],ini$G_eta,ini$G_eta))
+.dml_cal   <- function(sigma=data$raw_cov,e_v=e_v,mu_v,sigma_v,n_groups=n_groups,w_g=w_g){
   sigma_v_iv  <- lapply(1:n_groups, function(i_groups) solve(sigma_v[[i_groups]]))
   dml <-
     (sapply(1:n_groups, function(i_groups) {

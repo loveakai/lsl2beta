@@ -78,6 +78,7 @@ lslSEM <- methods::setRefClass(Class = "lslSEM",
                                      .getpar(pattern = mat$pattern, value = list(mat$value$alpha_i[[x]],mat$value$beta_i[[x]],mat$value$phi_i[[x]]),v_label,f_label,mat_label,group=names(mat$value$alpha_i[x]))
                                    } ) %>% do.call(rbind,.) %>% rbind(ref,.)
                                    output   <- within(inc,{
+                                     ini<-value
                                      rm(value)
                                    })
                                    
