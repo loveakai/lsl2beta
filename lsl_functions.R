@@ -176,7 +176,7 @@
   alpha_i   <- mat$value$alpha_i
   n_eta     <- length(mat$pattern$alpha_p)
   n_groups  <- attributes(data)$n_groups
-  
+
   ## reference components updating
   
   # alpha
@@ -285,6 +285,7 @@
         (phi_r[j,-j]+phi_i[[i_groups]][j,-j]) %*% solve(phi_r[-j,-j]+phi_i[[i_groups]][-j,-j]) %*% (phi_r[-j,j]+phi_i[[i_groups]][-j,j])
       cth<-is.na(mat$pattern$phi_p[i])
       phi_i[[i_groups]][j,j]<-.penalty(theta=phi,gamma=gamma,cth=cth,w=1,delta=delta,type=type)
+
     }
     
   }
@@ -300,6 +301,7 @@
 .ecm       <- function(mat=mat,maxit,cri,penalize,model=model,data=data){
   
   alpha_p   <- mat$pattern$alpha_p 
+
   beta_p    <- mat$pattern$beta_p
   phi_p     <- mat$pattern$phi_p
   alpha_r   <- mat$value$alpha_r
