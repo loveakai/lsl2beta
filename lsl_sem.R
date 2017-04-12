@@ -1,99 +1,107 @@
-rm(list=ls())
-set.seed(4869)
-library(dplyr);library(gtools);library(magrittr);library(plyr);library(reshape2)
-
-source('./lsl_tool.R')
-source('./lsl_functions.R')
-
-model.cfa<-'
-F1=~0.8*x1+0.8*x2+0.8*x3
-F2=~0.8*x4+0.8*x5+0.8*x6
-F3=~0.8*x7+0.8*x8+0.8*x9
-x1~~(1-0.8^2)*x1
-x2~~(1-0.8^2)*x2
-x3~~(1-0.8^2)*x3
-x4~~(1-0.8^2)*x4
-x5~~(1-0.8^2)*x5
-x6~~(1-0.8^2)*x6
-x7~~(1-0.8^2)*x7
-x8~~(1-0.8^2)*x8
-x9~~(1-0.8^2)*x9
-F2~~1*F2
-F3~~1*F3
-F1~~1*F1
-F1~~0*F2
-F1~~0*F3
-F2~~0*F3
-'
-
-model.cfa2<-'
-F1=~0.8*x1+0.6*x2+0.6*x3
-F2=~0.8*x4+0.6*x5+0.6*x6
-F3=~0.8*x7+0.6*x8+0.6*x9
-x1~~(1-0.8^2)*x1
-x2~~(1-0.6^2)*x2
-x3~~(1-0.6^2)*x3
-x4~~(1-0.8^2)*x4
-x5~~(1-0.6^2)*x5
-x6~~(1-0.6^2)*x6
-x7~~(1-0.8^2)*x7
-x8~~(1-0.6^2)*x8
-x9~~(1-0.6^2)*x9
-F2~~1*F2
-F3~~1*F3
-F1~~1*F1
-F1~~0*F2
-F1~~0*F3
-F2~~0*F3
-'
-
-
-
-model.cfa3<-'
-F1=~0.8*x1+0.4*x2+0.4*x3
-F2=~0.8*x4+0.4*x5+0.4*x6
-F3=~0.8*x7+0.4*x8+0.4*x9
-x1~~(1-0.8^2)*x1
-x2~~(1-0.4^2)*x2
-x3~~(1-0.4^2)*x3
-x4~~(1-0.8^2)*x4
-x5~~(1-0.4^2)*x5
-x6~~(1-0.4^2)*x6
-x7~~(1-0.8^2)*x7
-x8~~(1-0.4^2)*x8
-x9~~(1-0.4^2)*x9
-F2~~1*F2
-F3~~1*F3
-F1~~1*F1
-F1~~0*F2
-F1~~0*F3
-F2~~0*F3
-'
-
-
- dta       <-list()
- dta[[1]]  <- lavaan::simulateData(model.cfa,sample.nobs = 10000L)  %>% cbind(group="g1")#%>% cbind(.,sample(c(1,2),size=nrow(.),rep=T))
- dta[[2]]  <- lavaan::simulateData(model.cfa2,sample.nobs = 10000L) %>% cbind(group="g2")
- dta[[3]]  <- lavaan::simulateData(model.cfa3,sample.nobs = 10000L) %>% cbind(group="g3")
- dta       <- do.call(rbind,dta)
-
-
-
-#mat       <- matgen(lambda=beta_vf)
-
-
-dta       <- lavaan::HolzingerSwineford1939[7:15]
-data      <- import(dta)
-
-beta_vf <- matrix(NA, 9, 3)
-beta_vf[c(1,2,3), 1] <- beta_vf[c(4,5,6), 2] <- beta_vf[c(7,8,9), 3] <- 1
-pattern <-list()
-pattern$beta_vf<-beta_vf
-beta_vf <- matrix(0,9,3)
-beta_vf[c(2,3),1]    <- beta_vf[c(5,6),2]    <- beta_vf[c(8,9),3]    <- 1
-beta_vf[1,1]         <- beta_vf[4,2]         <- beta_vf[7,3]         <- 1
-value <-list()
-value$beta_vf<-beta_vf
-model     <- specify(pattern,value)
-
-learn()
+lslSEM <- methods::setRefClass(Class = "lslSEM", 
+                               fields = list(
+                                 data = "list", 
+                                 model = "data.frame", 
+                                 knowledge = "list"),
+                               
+                               methods = list(
+                                 import= function(raw_obs,var_subset,var_group,obs_subset,obs_weight,raw_cov,raw_mean,obs_size) {
+                                   if (missing(raw_obs)) {
+                                     if (is.list(raw_cov)) {
+                                       output<-list(raw_cov = raw_cov, raw_mean = raw_mean)
+                                     } else {
+                                       output<-list(raw_cov = list(raw_cov),raw_mean=list(raw_mean))
+                                     }
+                                     if (!missing(obs_size)) {attr(output,"obs_size")<-obs_size}
+                                   }  else {
+                                     if (!is.data.frame(raw_obs)) {
+                                       as.data.frame(raw_obs)
+                                     }
+                                     if (missing(obs_subset)) {
+                                       obs_subset <- 1:nrow(raw_obs)
+                                     }
+                                     if (missing(var_group)) {
+                                       if (missing(var_subset)) {
+                                         var_subset <- 1:ncol(raw_obs)
+                                       }
+                                       raw_obs %<>% .[obs_subset,var_subset] 
+                                       if (is.null(colnames(raw_obs))) colnames(raw_obs)<-paste0("v",1:ncol(raw_obs))
+                                       raw_obs %<>% cbind(group=1)
+                                       var_group <-ncol(raw_obs)
+                                     } else {
+                                       if (is.character(var_group)) {
+                                         var_group <- which(colnames(raw_obs)%in%(var_group))
+                                       }
+                                       if (missing(var_subset)) {
+                                         var_subset <- (1:ncol(raw_obs)) %>% .[!. %in% var_group]
+                                       }
+                                       raw_o   <- raw_obs[obs_subset,var_subset]
+                                       if (is.null(colnames(raw_o))) colnames(raw_o)<-paste0("v",1:ncol(raw_o))
+                                       raw_obs <- cbind(raw_o,group=raw_obs[,var_group])
+                                     }
+                                     output<-list(
+                                       raw_obs = raw_obs,
+                                       raw_cov = split(raw_obs, raw_obs[,ncol(raw_obs)]) %>% lapply(function(x) {
+                                         cov(x[, -ncol(x)])
+                                       }),
+                                       raw_mean = split(raw_obs, raw_obs[,ncol(raw_obs)]) %>% lapply(function(x) {
+                                         apply(x[, -ncol(x)], 2, mean)
+                                       })
+                                     )
+                                     attr(output,"obs_size")  <- plyr::count(raw_obs[,ncol(raw_obs)]) %>% .[,2]
+                                     
+                                   }
+                                   attr(output,"n_groups") <- output$raw_cov %>% length
+                                   if (!is.null(colnames(output$raw_cov[[1]]))) {
+                                     attr(output,"v_label")<-colnames(output$raw_cov[[1]])
+                                   }
+                                   attr(output,"g_label")<-unique(raw_obs[,ncol(raw_obs)]) %>% as.character
+                                   data<<-output
+                                 },
+                                 
+                                 specify = function(pattern,value,difference,ref_group,auto_scale=T,v_label,f_label){
+                                   
+                                   if (!exists("beta_vf",pattern)) stop("beta_vf must be specified")
+                                   if (missing(v_label)) {v_label<-attributes(data)$v_label} 
+                                   if (missing(f_label)) {f_label<-paste0("f",1:ncol(pattern$beta_vf))}
+                                   if (missing(ref_group)) {ref_group<-1L}
+                                   if (is.character(ref_group)) {ref_group<-which(attributes(data)$g_label==ref_group)}
+                                   vf_label <- paste0(v_label,"<-",rep(f_label,each=length(v_label)))
+                                   fv_label <- paste0(f_label,"<-",rep(v_label,each=length(f_label)))
+                                   mat_label<- sapply(c(v_label,f_label),function(x) paste0(c(v_label,f_label),"<-",x)) %>% `rownames<-`(c(v_label,f_label))
+                                   labels   <- list(v_label=v_label,f_label=f_label,vf_label=vf_label,fv_label=fv_label,mat_label=mat_label)
+                                   n_groups <- attributes(data)$n_groups
+                                   
+                                   mat      <- .matgen(pattern,value,n_groups = n_groups,labels=labels,scale=auto_scale,ref_group=ref_group,data=data)
+                                   ref      <- .getpar(pattern = mat$pattern,value = list(mat$value$alpha_r,mat$value$beta_r,mat$value$phi_r),v_label,f_label,mat_label,group="r")
+                                   inc      <- lapply((1:n_groups),function(x){
+                                     .getpar(pattern = mat$pattern, value = list(mat$value$alpha_i[[x]],mat$value$beta_i[[x]],mat$value$phi_i[[x]]),v_label,f_label,mat_label,group=names(mat$value$alpha_i[x]))
+                                   } ) %>% do.call(rbind,.) %>% rbind(ref,.)
+                                   output   <- within(inc,{
+                                     ini<-value
+                                     rm(value)
+                                   })
+                                   
+                                   output   <-output[!(output$matrix=="phi"&(output$row>output$col)),]
+                                   attr(output,"mat")<-mat
+                                   attr(output,"labels")<-labels
+                                   attr(output,"ref_group")<-attributes(data)$g_label[ref_group]
+                                   model<<-output
+                                 },
+                                 
+                                 learn = function(penalty,gamma,delta,control=list(max_iter,rel_tol)){
+                                   if (missing(penalty)) {pl<-"l1"} else {pl<-penalty}
+                                   if (missing(gamma))   gamma  <-seq(0.025,0.1,0.025)
+                                   if (missing(delta))   delta  <-c(2.5)
+                                   if (missing(control)) {control<-list(max_iter=500,rel_tol=10^(-5))} else {
+                                     if (is.null(control$max_iter)) {control$max_iter<-500}
+                                     if (is.null(control$rel_tol))  {control$rel_tol <-10^(-5)}
+                                   }
+                                   
+                                   mat       <-attributes(model)$mat
+                                   allpen<-expand.grid(pl=pl,delta=delta,gamma=gamma)
+                                   
+                                   knowledge<<-lapply(1:nrow(allpen),function(x) {penalize<-list(pl=pl,delta=allpen[x,2],gamma=allpen[x,3])
+                                   .ecm(mat = mat,maxit=control[[1]],cri=control[[2]],penalize=penalize,model=model,data=data)})
+                                 }
+                               ))
