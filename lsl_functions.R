@@ -349,8 +349,8 @@
   for (it in 1:maxit){
     
     #cat("...",it)
-    mod10<-ifelse(mod(it,75)==0,75,mod(it,75))
-    print(noquote(pic[mod10]))
+    #mod10<-ifelse(mod(it,75)==0,75,mod(it,75))
+    #print(noquote(pic[mod10]))
     
     e_step    <- .estep(ini,data=data)
     cm_step   <- .cmstep(w_g=w_g,JK=JK,JLK=JLK,mat=ini$mat,e_step=e_step,type=type,gamma=gamma,delta=delta,data=data)
@@ -382,38 +382,61 @@
   n_inc1<-nrow(q[(q$group!="r")&(q$group!=ref_group),])
   n_inc2<-nrow(q[(q$group==ref_group)&((q$matrix=="phi")&(q$col==q$row)),])
   n_par<-n_ref+n_inc1+n_inc2
-
+  
+  sigma_v<-lapply((1:n_groups),function(i_groups) subset(ini$sigma_eta[[i_groups]],G_eta,G_eta))
+  mu_v   <-lapply(1:n_groups, function(i_groups) subset(ini$mu_eta[[i_groups]],G_eta))
+  df     <- n_v*(n_v+3)/2-n_par
+  df_b   <- n_v*(n_v+3)/2-2*n_v
+  n_obs  <-attributes(data)$obs_size %>% sum 
+  
   dml<-.dml_cal(sigma=data$raw_cov,
                 e_v=e_v,
-                mu_v=lapply(1:n_groups, function(i_groups) subset(ini$mu_eta[[i_groups]],G_eta)),
-                sigma_v=lapply(1:n_groups, function(i_groups) subset(ini$sigma_eta[[i_groups]],G_eta,G_eta)),
+                mu_v=mu_v,
+                sigma_v=sigma_v,
                 n_groups=n_groups,
-                w_g=w_g)
+                w_g=w_g,
+                n_v=n_v)
   dml_b<-.dml_cal(sigma=data$raw_cov,
                     e_v=e_v,
                     mu_v=lapply((1:n_groups),function(i_groups) as.matrix(e_v[[i_groups]])),
                     sigma_v=lapply((1:n_groups),function(i_groups) diag(diag(data$raw_cov[[i_groups]]))),
                     n_groups=n_groups,
-                    w_g=w_g)
+                    w_g=w_g,
+                    n_v=n_v)
+  rpl  <-sapply(output$value[is.na(output$type)],function(x) .rpl_cal(x, gamma=gamma, type=type, delta=delta)) %>% sum
+  dpl  <-dml+rpl
+  lrt  <-n_obs*dml
+  lrt_b<-n_obs*dml_b
+  srmr <-sapply((1:n_groups),function(i_groups) {
+    sqrt(
+      sum(.ltri((sigma_v[[i_groups]]-data$raw_cov[[i_groups]])^2/tcrossprod(diag(sigma_v[[i_groups]]))))/(n_v*(n_v+1)/2)
+      ) 
+    }) %>% sum
   
-  
-  df<- (n_v)*(n_v+3)/2-n_par
-  
+  rmsea<-sqrt(max((lrt-df)/(df*n_obs),0))
+  mc   <-exp(-0.5*(lrt-df)/n_obs)
+  ghat <-n_v/(n_v+2*(lrt-df)/n_obs)
+  cfi  <-1 - max(lrt - df, 0) / max(lrt- df, lrt_b - df_b, 0)
+  nnfi <-(lrt_b / df_b - lrt / df)/(lrt_b/ df_b - 1)
+  bl89 <-(lrt_b - lrt) / (lrt_b- df)
+  rni  <-((lrt_b - df_b) - (lrt - df))/(lrt_b - df_b)
+  aic  <-dml + (2 / n_obs) * n_par
+  bic  <-dml + (log(n_obs) / n_obs) * n_par
   
   
   return(list(parameter=output$value,
               optimization=list(pl=type, gamma=gamma, delta=delta, iteration=it, n_par=n_par, dml=dml),
-              goodness=list(df=df,dml_obs=dml_obs)))
+              goodness=list(df=df,rpl=rpl,dpl=dpl,lrt=lrt,srmr=srmr,rmsea=rmsea,mc=mc,ghat=ghat,cfi=cfi,nnfi=nnfi,bl89=bl89,rni=rni,aic=aic,bic=bic)))
   
 }
 
-.dml_cal   <- function(sigma=data$raw_cov,e_v=e_v,mu_v,sigma_v,n_groups=n_groups,w_g=w_g){
+.dml_cal   <- function(sigma=data$raw_cov,e_v=e_v,mu_v,sigma_v=sigma_v,n_groups=n_groups,w_g=w_g,n_v=n_v){
   sigma_v_iv  <- lapply(1:n_groups, function(i_groups) solve(sigma_v[[i_groups]]))
   dml <-
     (sapply(1:n_groups, function(i_groups) {
       w_g[[i_groups]] * (sum(diag(sigma[[i_groups]] %*% sigma_v_iv[[i_groups]])) -
                            log(det(sigma[[i_groups]] %*% sigma_v_iv[[i_groups]]))  -
-                           dim(sigma_v[[i_groups]])[1])
+                           n_v)
     })  +
       sapply(1:n_groups, function(i_groups) {
         w_g[[i_groups]] * (t(e_v[[i_groups]] - mu_v[[i_groups]]) %*% sigma_v_iv[[i_groups]] %*% (e_v[[i_groups]] -
@@ -422,7 +445,29 @@
   return(dml)
 }
 
-invspecify<- function(model, value) {
+.rpl_cal    <- function(theta, gamma, type, delta) {
+  if (type == "l1") {
+    rho <- abs(theta) * gamma
+  } else if (type == "scad") {
+    if (abs(theta) <= gamma) {
+      rho <- abs(theta) * gamma
+    } else if (gamma < abs(theta) & abs(theta) <= gamma * delta) {
+      rho <-
+        -(abs(theta) ^ 2 + gamma ^ 2 - 2 * gamma * delta * abs(theta)) / (2 * (delta - 1))
+    } else {
+      rho <- (gamma ^ 2 * (delta ^ 2 - 1)) / (2 * (delta - 1))
+    }
+  } else if (type == "mcp") {
+    if (abs(theta) <= gamma * delta) {
+      rho <- gamma * delta - abs(theta) ^ 2 / (2 * delta)
+    } else{
+      rho <- 1 / 2 * gamma ^ 2 * delta
+    }
+  }
+  return(rho)
+}
+
+invspecify <- function(model, value) {
   split(model, model$group) %>% lapply(., function(w) {
     split(w, w$matrix) %>% lapply(., function(x) {
       if (any(x$col  !=  1)) {
@@ -442,12 +487,18 @@ invspecify<- function(model, value) {
   })
 }
 
-.is_est <- function(x){
+.is_est    <- function(x){
   x <- is.na(x) | x == 1
   return(x)
 } # 判定是否需要估計，如果X為1為需要估計，X為NA為懲罰項，均返回"TRUE"。X為0為不需要估計，返回"FALSE"。
 
-.is_one <- function(x){
+.is_one    <- function(x){
   x <- !is.na(x) & x == 1
   return(x)
 }
+
+.ltri <- function(x) {
+  x[upper.tri(x == 1)] = 0
+  return(x)
+}
+
