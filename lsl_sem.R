@@ -105,3 +105,4 @@ lslSEM <- methods::setRefClass(Class = "lslSEM",
                                    .ecm(mat = mat,maxit=control[[1]],cri=control[[2]],penalize=penalize,model=model,data=data)})
                                  }
                                ))
+
