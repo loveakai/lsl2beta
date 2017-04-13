@@ -14,9 +14,22 @@ dta       <- lavaan::HolzingerSwineford1939
 rc_sem <- lslSEM()
 rc_sem$import(raw_obs=dta,var_subset = c(7:15))
 rc_sem$specify(pattern)
-rc_sem$learn(penalty="scad",gamma = 0.1,delta=2.5)
+rc_sem$learn(penalty="scad",gamma = seq(0.1),delta=2.5)
 
 rc_sem$knowledge
 
+model<-rc_sem$model
+data<-rc_sem$data
+
+pl<-"l1"
+gamma  <-seq(0.025,0.1,0.025)
+delta  <-c(2.5)
+control<-list(max_iter=500,rel_tol=10^(-5))
+mat       <-attributes(model)$mat
+allpen<-expand.grid(pl=pl,delta=delta,gamma=gamma)
+x=1
+penalize<-list(pl=pl,delta=allpen[x,2],gamma=allpen[x,3])
+maxit=control[[1]]
+cri=control[[2]]
 
 

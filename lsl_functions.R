@@ -123,31 +123,27 @@
    }) %>% return
   }
 
-.threshold <- function(theta,gma){
-  sign(theta)*max(abs(theta)-gma,0) 
-}
-
 .varphi    <- function(x,Phi) {diag(Phi)[x]-Phi[x,-x]%*%solve(Phi[-x,-x])%*%Phi[-x,x]}
 
 .penalty   <- function(theta,gamma,cth,w,delta,type){
   if (type == "l1") {
-    theta <- .threshold(theta, gamma * cth * w)
+    theta <- sign(theta)*max(abs(theta) - gamma * cth * w,0)
   } else if (type == "scad") {
     if (abs(theta) <= gamma * (1 + cth * w)) {
-      theta <- .threshold(theta, cth * w * gamma)
+      theta <- sign(theta)*max(abs(theta) - gamma * cth * w,0)
     } else if (gamma * (1 + cth * w) < abs(theta) & abs(theta) <= gamma * delta) {
-      theta <- .threshold(theta, (cth * w * gamma * delta) / (delta - 1)) / (1 - ((cth * w) / (delta - 1)))
+      theta <-  sign(theta)*max(abs(theta) - ((cth * w * gamma * delta) / (delta - 1)),0) / (1 - ((cth * w) / (delta - 1)))
     } else { }
   } else if (type == "mcp") {
     if (abs(theta) <= gamma * delta) {
-      theta <- .threshold(theta, cth * w * gamma) / (1 - ((cth * w) / delta))
+      theta <- sign(theta)*max(abs(theta) - gamma * cth * w,0) / (1 - ((cth * w) / delta))
     } else { }
   }
   return(theta)
 }
 
 .estep     <- function(ini,data=data){
-  n_groups  <-attributes(data)$n_groups
+  n_groups  <- attributes(data)$n_groups
   mu_eta    <- ini$mu_eta
   mu_v      <- lapply(1:n_groups, function(i_groups) subset(ini$mu_eta[[i_groups]],ini$G_eta))
   sigma_veta<- lapply(1:n_groups, function(i_groups) subset(ini$sigma_eta[[i_groups]],ini$G_eta))
@@ -160,9 +156,9 @@
   c_eta     <- lapply(1:n_groups, function(i_groups) {ini$sigma_eta[[i_groups]] - sigma_etav[[i_groups]] %*% solve(sigma_v[[i_groups]]) %*% sigma_veta[[i_groups]] +
       J[[i_groups]] %*% t(J[[i_groups]]) + J[[i_groups]] %*% t(ini$e_v[[i_groups]]) %*% t(K[[i_groups]]) + K[[i_groups]] %*% ini$e_v[[i_groups]] %*% t(J[[i_groups]]) +
       K[[i_groups]] %*% c_v[[i_groups]] %*% t(K[[i_groups]])})
-  
   return(list(e_eta=e_eta, c_eta=c_eta))
 }
+
 
 .cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,mat=ini$mat,e_step=e_step,type=type,gamma=gamma,delta=delta,data=data){
   
@@ -299,7 +295,7 @@
 } 
 
 .ecm       <- function(mat=mat,maxit,cri,penalize,model=model,data=data){
-  
+
   alpha_p   <- mat$pattern$alpha_p 
 
   beta_p    <- mat$pattern$beta_p
@@ -389,7 +385,8 @@
   mu_v   <-lapply(1:n_groups, function(i_groups) subset(ini$mu_eta[[i_groups]],G_eta))
   df     <- n_v*(n_v+3)/2-n_par
   df_b   <- n_v*(n_v+3)/2-2*n_v
-  n_obs  <-attributes(data)$obs_size %>% sum 
+  n_obs  <-attributes(data)$obs_size %>% sum
+
   
   dml<-.dml_cal(sigma=data$raw_cov,
                 e_v=e_v,
@@ -424,7 +421,7 @@
   rni  <-((lrt_b - df_b) - (lrt - df))/(lrt_b - df_b)
   aic  <-dml + (2 / n_obs) * n_par
   bic  <-dml + (log(n_obs) / n_obs) * n_par
-  
+
   
   return(list(parameter=output$value,
               optimization=list(pl=type, gamma=gamma, delta=delta, iteration=it, n_par=n_par, dml=dml),

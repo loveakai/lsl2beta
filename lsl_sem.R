@@ -98,11 +98,13 @@ lslSEM <- methods::setRefClass(Class = "lslSEM",
                                      if (is.null(control$rel_tol))  {control$rel_tol <-10^(-5)}
                                    }
                                    
+                                   
                                    mat       <-attributes(model)$mat
                                    allpen<-expand.grid(pl=pl,delta=delta,gamma=gamma)
                                    
                                    knowledge<<-lapply(1:nrow(allpen),function(x) {penalize<-list(pl=pl,delta=allpen[x,2],gamma=allpen[x,3])
                                    .ecm(mat = mat,maxit=control[[1]],cri=control[[2]],penalize=penalize,model=model,data=data)})
                                  }
+                                 
                                ))
 
