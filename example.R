@@ -12,7 +12,7 @@ pattern=list(beta_vf=beta_vf)
 dta       <- lavaan::HolzingerSwineford1939
 
 rc_sem <- lslSEM()
-rc_sem$import(raw_obs=dta,var_subset = c(7:15))
+rc_sem$input(raw_obs=dta,var_subset = c(7:15))
 rc_sem$specify(pattern)
 rc_sem$learn(penalty="scad",gamma = seq(0.1),delta=2.5)
 

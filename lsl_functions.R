@@ -1,4 +1,4 @@
-.matgen    <- function(pattern,value,n_groups,scale,labels,ref_group,data=data){ #**diminfo could be modified
+.par_mat_cal    <- function(pattern,value,n_groups,scale,labels,ref_group,data=data){ #**diminfo could be modified
   
   #pattern matarices generation
   #only 3 matrices have pattern matrix, including alpha, beta, Phi
@@ -102,7 +102,7 @@
   
 }
 
-.getpar    <- function(pattern,value,v_label,f_label,mat_label,group){
+.getpar    <- function(pattern,value,v_label,f_label,par_mat_label,group){
   pars<-mapply(function(ma,val,pat,p,v,co,ro,nm) {
     rbind(nm[p|v],ma,group,ro[p|v],co[p|v],pat[p|v],val[p|v]) %>% 
       `rownames<-`(c("name","matrix","group","row","col","type","value"))},
@@ -112,7 +112,7 @@
     v=lapply(value,function(x) {as.matrix(x)!=0}),
     co=lapply(pattern,function(x) {as.matrix(x) %>% col}),
     ro=lapply(pattern,function(x) {as.matrix(x) %>% row}),
-    nm=list(c(v_label,f_label),mat_label,mat_label) %>% lapply(as.matrix),
+    nm=list(c(v_label,f_label),par_mat_label,par_mat_label) %>% lapply(as.matrix),
     ma=list("alpha","beta","phi")) %>% 
     `names<-`(c("alpha","beta","phi")) %>% lapply(.,t) %>% do.call(rbind,.)
    within(as.data.frame(pars),{
@@ -160,23 +160,23 @@
 }
 
 
-.cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,mat=ini$mat,e_step=e_step,type=type,gamma=gamma,delta=delta,data=data){
+.cmstep    <- function(w_g=w_g,JK=JK,JLK=JLK,par_mat=ini$par_mat,e_step=e_step,type=type,gamma=gamma,delta=delta,data=data){
   
   e_eta     <- e_step$e_eta
   c_eta     <- e_step$c_eta
-  phi_r     <- mat$value$phi_r
-  beta_r    <- mat$value$beta_r
-  alpha_r   <- mat$value$alpha_r
-  phi_i     <- mat$value$phi_i
-  beta_i    <- mat$value$beta_i
-  alpha_i   <- mat$value$alpha_i
-  n_eta     <- length(mat$pattern$alpha_p)
+  phi_r     <- par_mat$value$phi_r
+  beta_r    <- par_mat$value$beta_r
+  alpha_r   <- par_mat$value$alpha_r
+  phi_i     <- par_mat$value$phi_i
+  beta_i    <- par_mat$value$beta_i
+  alpha_i   <- par_mat$value$alpha_i
+  n_eta     <- length(par_mat$pattern$alpha_p)
   n_groups  <- attributes(data)$n_groups
 
   ## reference components updating
   
   # alpha
-  for (j in which(.is_est(mat$pattern$alpha_p))){
+  for (j in which(.is_est(par_mat$pattern$alpha_p))){
     w_alpha_r    <- 1/(sapply(1:n_groups, function(i_groups) {w_g[[i_groups]]*solve(phi_r+phi_i[[i_groups]])[j,j]}) %>% sum)
     alpha_r[j]   <- 
       w_alpha_r * (
@@ -188,7 +188,7 @@
   }
   # Beta
   
-  for (i in which(.is_est(mat$pattern$beta_p))){
+  for (i in which(.is_est(par_mat$pattern$beta_p))){
     k        <- ceiling(i/n_eta)
     j        <- i-(k-1)*n_eta
     w_beta_r <- 1/(sapply(1:n_groups, function(i_groups) {w_g[[i_groups]]*solve(phi_r+phi_i[[i_groups]])[j,j]*c_eta[[i_groups]][k,k]}) %>% sum)
@@ -199,7 +199,7 @@
           sum(sapply(1:n_groups, function(i_groups) {w_g[[i_groups]] * solve(phi_r+phi_i[[i_groups]])[j,-j] %*% 
               (c_eta[[i_groups]][-j,k] - e_eta[[i_groups]][k] * (alpha_r+alpha_i[[i_groups]])[-j] - (beta_r[-j,] + beta_i[[i_groups]][-j,]) %*% c_eta[[i_groups]][,k])}))
       )
-    cth<-is.na(mat$pattern$beta_p[i])
+    cth<-is.na(par_mat$pattern$beta_p[i])
     beta_r[j,k]<-.penalty(theta=beta,gamma=gamma,cth=cth,w=w_beta_r,delta=delta,type=type)
   }
   
@@ -209,7 +209,7 @@
       (alpha_r+alpha_i[[i_groups]]) %*% t(alpha_r+alpha_i[[i_groups]]) + (alpha_r+alpha_i[[i_groups]]) %*% t(e_eta[[i_groups]]) %*% t(beta_r+beta_i[[i_groups]]) - (beta_r+beta_i[[i_groups]]) %*% t(c_eta[[i_groups]]) + 
       (beta_r+beta_i[[i_groups]]) %*% e_eta[[i_groups]] %*% t(alpha_r+alpha_i[[i_groups]]) + (beta_r+beta_i[[i_groups]]) %*% c_eta[[i_groups]] %*% t(beta_r+beta_i[[i_groups]])})
   
-  for (i in which(.is_est(mat$pattern$phi_p))){
+  for (i in which(.is_est(par_mat$pattern$phi_p))){
     k      <- ceiling(i/n_eta)
     j      <- i-(k-1)*n_eta
     if (j<=k) {} else {
@@ -222,7 +222,7 @@
         w_phi_r * (
           sapply(1:n_groups, function(i_groups) {(w_g[[i_groups]] / var_phi[[i_groups]][j]) * (c_zetatzeta[[i_groups]][lk,j] - phi_r[j,-c(j,k)] %*% matrix(c_zetat[[i_groups]][-lk,lk]) - 
                                                                                                  phi_i[[i_groups]][j,-j] %*% c_zetat[[i_groups]][,lk])})  %>% sum )
-      cth<-is.na(mat$pattern$phi_p[i])
+      cth<-is.na(par_mat$pattern$phi_p[i])
       phi_r[j,k]<-.penalty(theta=phi,gamma=gamma,cth=cth,w=w_phi_r,delta=delta,type=type)
     }
   }
@@ -232,20 +232,20 @@
   for (i_groups in 1:n_groups) {
     #alpha
     if (i_groups==1){} else {
-      for (j in which(.is_est(mat$pattern$alpha_p))){
+      for (j in which(.is_est(par_mat$pattern$alpha_p))){
         w_alpha_i         <- 1/(w_g[[i_groups]]*solve(phi_i[[i_groups]])[j,j])
         alpha_i[[i_groups]][j]   <- w_alpha_i * ( w_g[[i_groups]] * solve(phi_r+phi_i[[i_groups]])[j,j] * (e_eta[[i_groups]][j] - alpha_r[j] - (beta_r+beta_i[[i_groups]])[j,] %*% e_eta[[i_groups]]) +
                                                     w_g[[i_groups]] * ((phi_r+phi_i[[i_groups]])[j,-j] %*% (e_eta[[i_groups]] - (alpha_r + alpha_i[[i_groups]]) - (beta_r+beta_i[[i_groups]]) %*% e_eta[[i_groups]])[-j]))
       }
       
-      for (i in which(.is_est(mat$pattern$beta_p))){
+      for (i in which(.is_est(par_mat$pattern$beta_p))){
         k        <- ceiling(i/n_eta)
         j        <- i-(k-1)*n_eta
         w_beta_i <- 1/(w_g[[i_groups]]*solve(phi_r+phi_i[[i_groups]])[j,j]*c_eta[[i_groups]][k,k])
         beta    <- w_beta_i * (
           w_g[[i_groups]] * solve(phi_r+phi_i[[i_groups]])[j,j] * (c_eta[[i_groups]][j,k] - e_eta[[i_groups]][k] * (alpha_r+alpha_i[[i_groups]])[j] - beta_r[j,] %*% c_eta[[i_groups]][,k] - beta_i[[i_groups]][j,-k] %*% c_eta[[i_groups]][-k,k])+
             w_g[[i_groups]] * solve(phi_r+phi_i[[i_groups]])[j,-j] %*% (c_eta[[i_groups]][-j,k] - e_eta[[i_groups]][k] * (alpha_r+alpha_i[[i_groups]])[-j] - (beta_r[-j,] + beta_i[[i_groups]][-j,]) %*% c_eta[[i_groups]][,k]))
-        cth<-is.na(mat$pattern$beta_p[i])
+        cth<-is.na(par_mat$pattern$beta_p[i])
         beta_i[[i_groups]][j,k]<-.penalty(theta=beta,gamma=gamma,cth=cth,w=w_beta_i,delta=delta,type=type)
       }
       
@@ -255,7 +255,7 @@
           (beta_r+beta_i[[i_groups]]) %*% e_eta[[i_groups]] %*% t(alpha_r+alpha_i[[i_groups]]) + (beta_r+beta_i[[i_groups]]) %*% c_eta[[i_groups]] %*% t(beta_r+beta_i[[i_groups]])})
       
       
-      for (i in which(.is_est(mat$pattern$phi_p))){
+      for (i in which(.is_est(par_mat$pattern$phi_p))){
         k      <- ceiling(i/n_eta)
         j      <- i-(k-1)*n_eta
         if (j<=k) {} else {
@@ -265,7 +265,7 @@
           var_phi     <- .varphi(j,(phi_r+phi_i[[i_groups]]))
           w_phi_i     <- 1/(w_g[[i_groups]]/var_phi*c_zetat[lk,lk])
           phi       <- w_phi_i * (w_g[[i_groups]] / var_phi) * (c_zetatzeta[lk,j] - phi_r[j,-j] %*% matrix(c_zetat[,lk]) - phi_i[[i_groups]][j,-c(j,k)] %*% matrix(c_zetat[-lk,lk]))
-          cth<-is.na(mat$pattern$phi_p[i])
+          cth<-is.na(par_mat$pattern$phi_p[i])
           phi_i[[i_groups]][j,k]<-.penalty(theta=phi,gamma=gamma,cth=cth,w=w_phi_i,delta=delta,type=type)
         }
       }
@@ -279,7 +279,7 @@
       c_zetat      <- solve(phi_r[-j,-j]+phi_i[[i_groups]][-j,-j])%*%c_zeta[[i_groups]][-j,-j]%*%solve(phi_r[-j,-j]+phi_i[[i_groups]][-j,-j])
       phi          <- c_zeta[[i_groups]][j,j] - 2 * (phi_r[j,-j]+phi_i[[i_groups]][j,-j]) %*% c_zetatzeta[,j] + (phi_r[j,-j]+phi_i[[i_groups]][j,-j]) %*% c_zetat %*% (phi_r[-j,j]+phi_i[[i_groups]][-j,j]) +
         (phi_r[j,-j]+phi_i[[i_groups]][j,-j]) %*% solve(phi_r[-j,-j]+phi_i[[i_groups]][-j,-j]) %*% (phi_r[-j,j]+phi_i[[i_groups]][-j,j])
-      cth<-is.na(mat$pattern$phi_p[i])
+      cth<-is.na(par_mat$pattern$phi_p[i])
       phi_i[[i_groups]][j,j]<-.penalty(theta=phi,gamma=gamma,cth=cth,w=1,delta=delta,type=type)
 
     }
@@ -294,32 +294,32 @@
               phi_i=phi_i))
 } 
 
-.ecm       <- function(mat=mat,maxit,cri,penalize,model=model,data=data){
+.ecm       <- function(par_mat=par_mat,maxit,cri,penalize,model=model,data=data){
 
-  alpha_p   <- mat$pattern$alpha_p 
+  alpha_p   <- par_mat$pattern$alpha_p 
 
-  beta_p    <- mat$pattern$beta_p
-  phi_p     <- mat$pattern$phi_p
-  alpha_r   <- mat$value$alpha_r
-  beta_r    <- mat$value$beta_r
-  phi_r     <- mat$value$phi_r
-  alpha_i   <- mat$value$alpha_i
-  beta_i    <- mat$value$beta_i
-  phi_i     <- mat$value$phi_i
+  beta_p    <- par_mat$pattern$beta_p
+  phi_p     <- par_mat$pattern$phi_p
+  alpha_r   <- par_mat$value$alpha_r
+  beta_r    <- par_mat$value$beta_r
+  phi_r     <- par_mat$value$phi_r
+  alpha_i   <- par_mat$value$alpha_i
+  beta_i    <- par_mat$value$beta_i
+  phi_i     <- par_mat$value$phi_i
   
   type      <- penalize$pl
   delta     <- penalize$delta
   gamma     <- penalize$gamma
   
   n_groups  <-attributes(data)$n_groups
-  n_eta     <-attributes(mat)$n_eta
-  n_v       <-attributes(mat)$n_v
-  n_f       <-attributes(mat)$n_f
+  n_eta     <-attributes(par_mat)$n_eta
+  n_v       <-attributes(par_mat)$n_v
+  n_f       <-attributes(par_mat)$n_f
   
   v_label   <-attributes(model)$labels$v_label
   f_label   <-attributes(model)$labels$f_label
   eta_label <-c(v_label,f_label)
-  mat_label <-attributes(model)$labels$mat_label
+  par_mat_label <-attributes(model)$labels$par_mat_label
   
   
   ide       <- diag(1, ncol = n_eta, nrow = n_eta)  %>% `colnames<-`(eta_label) %>% `rownames<-`(eta_label) 
@@ -336,10 +336,10 @@
   JK        <- expand.grid(1:n_eta,1:n_eta)[2:1]
   JLK       <- expand.grid(1:(n_eta-1),1:n_eta)[2:1]
   
-  ini       <- list(IBinv=IBinv,mu_eta=mu_eta,sigma_eta=sigma_eta,c_v=c_v,G_eta=G_eta,e_v=e_v,mat=mat)
-  ref      <- .getpar(pattern = ini$mat$pattern,value = list(ini$mat$value$alpha_r,ini$mat$value$beta_r,ini$mat$value$phi_r),v_label,f_label,mat_label,group="r")
+  ini       <- list(IBinv=IBinv,mu_eta=mu_eta,sigma_eta=sigma_eta,c_v=c_v,G_eta=G_eta,e_v=e_v,par_mat=par_mat)
+  ref      <- .getpar(pattern = ini$par_mat$pattern,value = list(ini$par_mat$value$alpha_r,ini$par_mat$value$beta_r,ini$par_mat$value$phi_r),v_label,f_label,par_mat_label,group="r")
   output      <- lapply((1:n_groups),function(x){
-    .getpar(pattern = ini$mat$pattern, value = list(ini$mat$value$alpha_i[[x]],ini$mat$value$beta_i[[x]],ini$mat$value$phi_i[[x]]),v_label,f_label,mat_label,group=names(ini$mat$value$alpha_i[x]))
+    .getpar(pattern = ini$par_mat$pattern, value = list(ini$par_mat$value$alpha_i[[x]],ini$par_mat$value$beta_i[[x]],ini$par_mat$value$phi_i[[x]]),v_label,f_label,par_mat_label,group=names(ini$par_mat$value$alpha_i[x]))
   } ) %>% do.call(rbind,.) %>% rbind(ref,.)
   output   <-output[!(output$matrix=="phi"&(output$row>output$col)),]
   inival   <-output$value
@@ -351,19 +351,19 @@
     #print(noquote(pic[mod10]))
     
     e_step    <- .estep(ini,data=data)
-    cm_step   <- .cmstep(w_g=w_g,JK=JK,JLK=JLK,mat=ini$mat,e_step=e_step,type=type,gamma=gamma,delta=delta,data=data)
-    ini$mat$value$phi_r   <- phi_r     <- cm_step$phi_r
-    ini$mat$value$beta_r  <- beta_r    <- cm_step$beta_r
-    ini$mat$value$alpha_r <- alpha_r   <- cm_step$alpha_r
-    ini$mat$value$phi_i   <- phi_i     <- cm_step$phi_i
-    ini$mat$value$beta_i  <- beta_i    <- cm_step$beta_i
-    ini$mat$value$alpha_i <- alpha_i   <- cm_step$alpha_i
+    cm_step   <- .cmstep(w_g=w_g,JK=JK,JLK=JLK,par_mat=ini$par_mat,e_step=e_step,type=type,gamma=gamma,delta=delta,data=data)
+    ini$par_mat$value$phi_r   <- phi_r     <- cm_step$phi_r
+    ini$par_mat$value$beta_r  <- beta_r    <- cm_step$beta_r
+    ini$par_mat$value$alpha_r <- alpha_r   <- cm_step$alpha_r
+    ini$par_mat$value$phi_i   <- phi_i     <- cm_step$phi_i
+    ini$par_mat$value$beta_i  <- beta_i    <- cm_step$beta_i
+    ini$par_mat$value$alpha_i <- alpha_i   <- cm_step$alpha_i
     ini$IBinv             <- lapply(1:n_groups, function(i_groups) solve(ide-(beta_r+beta_i[[i_groups]])))
     ini$mu_eta            <- lapply(1:n_groups, function(i_groups) ini$IBinv[[i_groups]]%*%(alpha_r+alpha_i[[i_groups]]))
     ini$sigma_eta         <- lapply(1:n_groups, function(i_groups) ini$IBinv[[i_groups]]%*%(phi_r+phi_i[[i_groups]])%*%t(ini$IBinv[[i_groups]]))
-    ref      <- .getpar(pattern = ini$mat$pattern,value = list(ini$mat$value$alpha_r,ini$mat$value$beta_r,ini$mat$value$phi_r),v_label,f_label,mat_label,group="r")
+    ref      <- .getpar(pattern = ini$par_mat$pattern,value = list(ini$par_mat$value$alpha_r,ini$par_mat$value$beta_r,ini$par_mat$value$phi_r),v_label,f_label,par_mat_label,group="r")
     inc      <- lapply((1:n_groups),function(x){
-      .getpar(pattern = ini$mat$pattern, value = list(ini$mat$value$alpha_i[[x]],ini$mat$value$beta_i[[x]],ini$mat$value$phi_i[[x]]),v_label,f_label,mat_label,group=names(ini$mat$value$alpha_i[x]))
+      .getpar(pattern = ini$par_mat$pattern, value = list(ini$par_mat$value$alpha_i[[x]],ini$par_mat$value$beta_i[[x]],ini$par_mat$value$phi_i[[x]]),v_label,f_label,par_mat_label,group=names(ini$par_mat$value$alpha_i[x]))
     } ) %>% do.call(rbind,.) %>% rbind(ref,.) 
     output<-inc
     output   <-output[!(output$matrix=="phi"&(output$row>output$col)),]
@@ -470,9 +470,9 @@ invspecify <- function(model, value) {
   split(model, model$group) %>% lapply(., function(w) {
     split(w, w$matrix) %>% lapply(., function(x) {
       if (any(x$col  !=  1)) {
-        y  <-  diag(0, attributes(model)$mat %>% attributes %$% n_eta)
+        y  <-  diag(0, attributes(model)$par_mat %>% attributes %$% n_eta)
       } else {
-        y <- matrix(0, attributes(model)$mat %>% attributes %$% n_eta)
+        y <- matrix(0, attributes(model)$par_mat %>% attributes %$% n_eta)
       }
       if(value=="type"){
         y[cbind(x$row, x$col)] <- x$type

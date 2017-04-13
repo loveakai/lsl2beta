@@ -5,7 +5,7 @@ lslSEM <- methods::setRefClass(Class = "lslSEM",
                                  knowledge = "list"),
                                
                                methods = list(
-                                 import= function(raw_obs,var_subset,var_group,obs_subset,obs_weight,raw_cov,raw_mean,obs_size) {
+                                 input= function(raw_obs,var_subset,var_group,obs_subset,obs_weight,raw_cov,raw_mean,obs_size) {
                                    if (missing(raw_obs)) {
                                      if (is.list(raw_cov)) {
                                        output<-list(raw_cov = raw_cov, raw_mean = raw_mean)
@@ -68,22 +68,22 @@ lslSEM <- methods::setRefClass(Class = "lslSEM",
                                    if (is.character(ref_group)) {ref_group<-which(attributes(data)$g_label==ref_group)}
                                    vf_label <- paste0(v_label,"<-",rep(f_label,each=length(v_label)))
                                    fv_label <- paste0(f_label,"<-",rep(v_label,each=length(f_label)))
-                                   mat_label<- sapply(c(v_label,f_label),function(x) paste0(c(v_label,f_label),"<-",x)) %>% `rownames<-`(c(v_label,f_label))
-                                   labels   <- list(v_label=v_label,f_label=f_label,vf_label=vf_label,fv_label=fv_label,mat_label=mat_label)
+                                   par_mat_label<- sapply(c(v_label,f_label),function(x) paste0(c(v_label,f_label),"<-",x)) %>% `rownames<-`(c(v_label,f_label))
+                                   labels   <- list(v_label=v_label,f_label=f_label,vf_label=vf_label,fv_label=fv_label,par_mat_label=par_mat_label)
                                    n_groups <- attributes(data)$n_groups
                                    
-                                   mat      <- .matgen(pattern,value,n_groups = n_groups,labels=labels,scale=auto_scale,ref_group=ref_group,data=data)
-                                   ref      <- .getpar(pattern = mat$pattern,value = list(mat$value$alpha_r,mat$value$beta_r,mat$value$phi_r),v_label,f_label,mat_label,group="r")
+                                   par_mat  <- .par_mat_cal(pattern,value,n_groups = n_groups,labels=labels,scale=auto_scale,ref_group=ref_group,data=data)
+                                   ref      <- .getpar(pattern = par_mat$pattern,value = list(par_mat$value$alpha_r,par_mat$value$beta_r,par_mat$value$phi_r),v_label,f_label,par_mat_label,group="r")
                                    inc      <- lapply((1:n_groups),function(x){
-                                     .getpar(pattern = mat$pattern, value = list(mat$value$alpha_i[[x]],mat$value$beta_i[[x]],mat$value$phi_i[[x]]),v_label,f_label,mat_label,group=names(mat$value$alpha_i[x]))
+                                     .getpar(pattern = par_mat$pattern, value = list(par_mat$value$alpha_i[[x]],par_mat$value$beta_i[[x]],par_mat$value$phi_i[[x]]),v_label,f_label,par_mat_label,group=names(par_mat$value$alpha_i[x]))
                                    } ) %>% do.call(rbind,.) %>% rbind(ref,.)
                                    output   <- within(inc,{
                                      ini<-value
                                      rm(value)
                                    })
                                    
-                                   output   <-output[!(output$matrix=="phi"&(output$row>output$col)),]
-                                   attr(output,"mat")<-mat
+                                   output   <-output[!(output$par_matrix=="phi"&(output$row>output$col)),]
+                                   attr(output,"par_mat")<-par_mat
                                    attr(output,"labels")<-labels
                                    attr(output,"ref_group")<-attributes(data)$g_label[ref_group]
                                    model<<-output
@@ -99,11 +99,11 @@ lslSEM <- methods::setRefClass(Class = "lslSEM",
                                    }
                                    
                                    
-                                   mat       <-attributes(model)$mat
+                                   par_mat       <-attributes(model)$par_mat
                                    allpen<-expand.grid(pl=pl,delta=delta,gamma=gamma)
                                    
                                    knowledge<<-lapply(1:nrow(allpen),function(x) {penalize<-list(pl=pl,delta=allpen[x,2],gamma=allpen[x,3])
-                                   .ecm(mat = mat,maxit=control[[1]],cri=control[[2]],penalize=penalize,model=model,data=data)})
+                                   .ecm(par_mat = par_mat,maxit=control[[1]],cri=control[[2]],penalize=penalize,model=model,data=data)})
                                  }
                                  
                                ))
