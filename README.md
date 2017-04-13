@@ -1,5 +1,11 @@
 # lsl2beta
 
+#### 20170413
+>(try8)</p>
+1. 更改名稱
+2. 修改排版（使用Rstudio reformat功能）
+3. 刪除.threshold函數，併入.shrinkage_cal
+
 #### 20170412
 >(try7)</p>
 1. 加入各種適配度指標，在只有一組時為正確。
