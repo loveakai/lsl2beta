@@ -99,10 +99,8 @@ lslSEM <- methods::setRefClass(
       if (is.character(ref_group)) {
         ref_group <- which(attributes(data)$g_label == ref_group)
       }
-      vf_label <-
-        paste0(v_label, "<-", rep(f_label, each = length(v_label)))
-      fv_label <-
-        paste0(f_label, "<-", rep(v_label, each = length(f_label)))
+      vf_label <- paste0(v_label, "<-", rep(f_label, each = length(v_label)))
+      fv_label <- paste0(f_label, "<-", rep(v_label, each = length(f_label)))
       par_mat_label <-
         sapply(c(v_label, f_label), function(x)
           paste0(c(v_label, f_label), "<-", x)) %>% `rownames<-`(c(v_label, f_label))
