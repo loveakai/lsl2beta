@@ -267,21 +267,24 @@
     ## reference components updating
     
     # alpha
+    solve_phi_all <- lapply(1:n_groups, function(i_groups) solve(phi_r + phi_i[[i_groups]]))
+    beta_all <- lapply(1:n_groups, function(i_groups) beta_r + beta_i[[i_groups]])
+    
     for (j in which(.is_est(par_mat$pattern$alpha_p))) {
       w_alpha_r <-
         1 / (sapply(1:n_groups, function(i_groups) {
-          w_g[[i_groups]] * solve(phi_r + phi_i[[i_groups]])[j, j]
+          w_g[[i_groups]] * solve_phi_all[[i_groups]][j, j]
         }) %>% sum)
       alpha_r[j] <-
-        w_alpha_r * (sum(unlist(lapply(1:n_groups, function(i_groups) {
-          w_g[[i_groups]] * solve(phi_r + phi_i[[i_groups]])[j, j] * (e_eta[[i_groups]][j] - alpha_i[[i_groups]][j] - (beta_r[j,] +
-                                                                                                                         beta_i[[i_groups]][j,]) %*% e_eta[[i_groups]])
-        }))) +
-          sum(unlist(lapply(1:n_groups, function(i_groups) {
-            w_g[[i_groups]] * solve(phi_r + phi_i[[i_groups]])[j,-j] %*% (e_eta[[i_groups]] - (alpha_r + alpha_i[[i_groups]]) - (beta_r +
-                                                                                                                                   beta_i[[i_groups]]) %*% e_eta[[i_groups]])[-j]
-          }))))
+        w_alpha_r * (sum(sapply(1:n_groups, function(i_groups) {
+          w_g[[i_groups]] * solve_phi_all[[i_groups]][j, j] * (e_eta[[i_groups]][j] - alpha_i[[i_groups]][j] - beta_all[[i_groups]][j,] %*% e_eta[[i_groups]])
+        })) +
+          sum(sapply(1:n_groups, function(i_groups) {
+            w_g[[i_groups]] * solve_phi_all[[i_groups]][j,-j] %*% (e_eta[[i_groups]] - (alpha_r + alpha_i[[i_groups]]) - beta_all[[i_groups]] %*% e_eta[[i_groups]])[-j]
+          })))
     }
+    
+    alpha_all <- lapply(1:n_groups, function(i_groups) alpha_r + alpha_i[[i_groups]])
     # Beta
     
     for (i in which(.is_est(par_mat$pattern$beta_p))) {
@@ -289,18 +292,16 @@
       j <- i - (k - 1) * n_eta
       w_beta_r <-
         1 / (sapply(1:n_groups, function(i_groups) {
-          w_g[[i_groups]] * solve(phi_r + phi_i[[i_groups]])[j, j] * c_eta[[i_groups]][k, k]
+          w_g[[i_groups]] * solve_phi_all[[i_groups]][j, j] * c_eta[[i_groups]][k, k]
         }) %>% sum)
       beta <-
         w_beta_r * (sum(sapply(1:n_groups, function(i_groups) {
-          w_g[[i_groups]] * solve(phi_r + phi_i[[i_groups]])[j, j] *
-            (c_eta[[i_groups]][j, k] - e_eta[[i_groups]][k] * (alpha_r +
-                                                                 alpha_i[[i_groups]])[j] - beta_r[j,-k] %*% c_eta[[i_groups]][-k, k] - beta_i[[i_groups]][j,] %*% c_eta[[i_groups]][, k])
+          w_g[[i_groups]] * solve_phi_all[[i_groups]][j, j] *
+            (c_eta[[i_groups]][j, k] - e_eta[[i_groups]][k] * alpha_all[[i_groups]][j] - beta_r[j,-k] %*% c_eta[[i_groups]][-k, k] - beta_i[[i_groups]][j,] %*% c_eta[[i_groups]][, k])
         })) +
           sum(sapply(1:n_groups, function(i_groups) {
-            w_g[[i_groups]] * solve(phi_r + phi_i[[i_groups]])[j,-j] %*%
-              (c_eta[[i_groups]][-j, k] - e_eta[[i_groups]][k] * (alpha_r +
-                                                                    alpha_i[[i_groups]])[-j] - (beta_r[-j,] + beta_i[[i_groups]][-j,]) %*% c_eta[[i_groups]][, k])
+            w_g[[i_groups]] * solve_phi_all[[i_groups]][j,-j] %*%
+              (c_eta[[i_groups]][-j, k] - e_eta[[i_groups]][k] * alpha_all[[i_groups]][-j] - (beta_r[-j,] + beta_i[[i_groups]][-j,]) %*% c_eta[[i_groups]][, k])
           })))
       cth <- is.na(par_mat$pattern$beta_p[i])
       beta_r[j, k] <-
@@ -313,19 +314,13 @@
           type = type
         )
     }
-    
+    beta_all <- lapply(1:n_groups, function(i_groups) beta_r + beta_i[[i_groups]])
     # Phi
     
-    c_zeta <-
-      lapply(1:n_groups, function(i_groups) {
-        c_eta[[i_groups]] - e_eta[[i_groups]] %*% (alpha_r + alpha_i[[i_groups]]) - c_eta[[i_groups]] %*% t(beta_r +
-                                                                                                              beta_i[[i_groups]]) - (alpha_r + alpha_i[[i_groups]]) %*% t(e_eta[[i_groups]]) +
-          (alpha_r + alpha_i[[i_groups]]) %*% t(alpha_r + alpha_i[[i_groups]]) + (alpha_r +
-                                                                                    alpha_i[[i_groups]]) %*% t(e_eta[[i_groups]]) %*% t(beta_r + beta_i[[i_groups]]) - (beta_r +
-                                                                                                                                                                          beta_i[[i_groups]]) %*% t(c_eta[[i_groups]]) +
-          (beta_r + beta_i[[i_groups]]) %*% e_eta[[i_groups]] %*% t(alpha_r +
-                                                                      alpha_i[[i_groups]]) + (beta_r + beta_i[[i_groups]]) %*% c_eta[[i_groups]] %*% t(beta_r +
-                                                                                                                                                         beta_i[[i_groups]])
+    c_zeta <- lapply(1:n_groups, function(i_groups) {
+        c_eta[[i_groups]] - e_eta[[i_groups]] %*% alpha_all[[i_groups]] - c_eta[[i_groups]] %*% t(beta_all[[i_groups]]) - alpha_all[[i_groups]] %*% t(e_eta[[i_groups]]) +
+          alpha_all[[i_groups]] %*% t(alpha_all[[i_groups]]) + alpha_all[[i_groups]] %*% t(e_eta[[i_groups]]) %*% t(beta_all[[i_groups]]) - beta_all[[i_groups]] %*% t(c_eta[[i_groups]]) +
+          beta_all[[i_groups]] %*% e_eta[[i_groups]] %*% t(alpha_all[[i_groups]]) + beta_all[[i_groups]] %*% c_eta[[i_groups]] %*% t(beta_all[[i_groups]])
       })
     
     for (i in which(.is_est(par_mat$pattern$phi_p))) {
@@ -376,31 +371,30 @@
       if (i_groups == 1) {
         
       } else {
+        solve_phi_all <- lapply(1:n_groups, function(i_groups) solve(phi_r + phi_i[[i_groups]]))
+        beta_all <- lapply(1:n_groups, function(i_groups) beta_r + beta_i[[i_groups]]) 
         for (j in which(.is_est(par_mat$pattern$alpha_p))) {
           w_alpha_i <-
             1 / (w_g[[i_groups]] * solve(phi_i[[i_groups]])[j, j])
           alpha_i[[i_groups]][j] <-
             w_alpha_i * (
-              w_g[[i_groups]] * solve(phi_r + phi_i[[i_groups]])[j, j] * (e_eta[[i_groups]][j] - alpha_r[j] - (beta_r +
-                                                                                                                 beta_i[[i_groups]])[j,] %*% e_eta[[i_groups]]) +
-                w_g[[i_groups]] * ((phi_r +
-                                      phi_i[[i_groups]])[j,-j] %*% (
-                                        e_eta[[i_groups]] - (alpha_r + alpha_i[[i_groups]]) - (beta_r + beta_i[[i_groups]]) %*% e_eta[[i_groups]]
-                                      )[-j])
+              w_g[[i_groups]] * solve_phi_all[[i_groups]][j, j] * (e_eta[[i_groups]][j] - alpha_r[j] - beta_all[[i_groups]][j,] %*% e_eta[[i_groups]]) +
+                w_g[[i_groups]] * solve_phi_all[[i_groups]][j,-j] %*% (e_eta[[i_groups]] - (alpha_r + alpha_i[[i_groups]]) - beta_all[[i_groups]] %*% e_eta[[i_groups]])[-j]
             )
         }
         
+        alpha_all <- lapply(1:n_groups, function(i_groups) alpha_r + alpha_i[[i_groups]]) 
         for (i in which(.is_est(par_mat$pattern$beta_p))) {
           k <- ceiling(i / n_eta)
           j <- i - (k - 1) * n_eta
           w_beta_i <-
-            1 / (w_g[[i_groups]] * solve(phi_r + phi_i[[i_groups]])[j, j] * c_eta[[i_groups]][k, k])
+            1 / (w_g[[i_groups]] * solve_phi_all[[i_groups]][j, j] * c_eta[[i_groups]][k, k])
           beta <- w_beta_i * (
-            w_g[[i_groups]] * solve(phi_r + phi_i[[i_groups]])[j, j] * (
-              c_eta[[i_groups]][j, k] - e_eta[[i_groups]][k] * (alpha_r + alpha_i[[i_groups]])[j] - beta_r[j,] %*% c_eta[[i_groups]][, k] - beta_i[[i_groups]][j,-k] %*% c_eta[[i_groups]][-k, k]
+            w_g[[i_groups]] * solve_phi_all[[i_groups]][j, j] * (
+              c_eta[[i_groups]][j, k] - e_eta[[i_groups]][k] * alpha_all[[i_groups]][j] - beta_r[j,] %*% c_eta[[i_groups]][, k] - beta_i[[i_groups]][j,-k] %*% c_eta[[i_groups]][-k, k]
             ) +
-              w_g[[i_groups]] * solve(phi_r + phi_i[[i_groups]])[j,-j] %*% (
-                c_eta[[i_groups]][-j, k] - e_eta[[i_groups]][k] * (alpha_r + alpha_i[[i_groups]])[-j] - (beta_r[-j,] + beta_i[[i_groups]][-j,]) %*% c_eta[[i_groups]][, k]
+              w_g[[i_groups]] * solve_phi_all[[i_groups]][j,-j] %*% (
+                c_eta[[i_groups]][-j, k] - e_eta[[i_groups]][k] * alpha_all[[i_groups]][-j] - (beta_r[-j,] + beta_i[[i_groups]][-j,]) %*% c_eta[[i_groups]][, k]
               )
           )
           cth <- is.na(par_mat$pattern$beta_p[i])
@@ -414,18 +408,13 @@
               type = type
             )
         }
-        
+        beta_all <- lapply(1:n_groups, function(i_groups) beta_r + beta_i[[i_groups]]) 
         
         c_zeta <-
           lapply(1:n_groups, function(i_groups) {
-            c_eta[[i_groups]] - e_eta[[i_groups]] %*% (alpha_r + alpha_i[[i_groups]]) - c_eta[[i_groups]] %*% t(beta_r +
-                                                                                                                  beta_i[[i_groups]]) - (alpha_r + alpha_i[[i_groups]]) %*% t(e_eta[[i_groups]]) +
-              (alpha_r + alpha_i[[i_groups]]) %*% t(alpha_r + alpha_i[[i_groups]]) + (alpha_r +
-                                                                                        alpha_i[[i_groups]]) %*% t(e_eta[[i_groups]]) %*% t(beta_r + beta_i[[i_groups]]) - (beta_r +
-                                                                                                                                                                              beta_i[[i_groups]]) %*% t(c_eta[[i_groups]]) +
-              (beta_r + beta_i[[i_groups]]) %*% e_eta[[i_groups]] %*% t(alpha_r +
-                                                                          alpha_i[[i_groups]]) + (beta_r + beta_i[[i_groups]]) %*% c_eta[[i_groups]] %*% t(beta_r +
-                                                                                                                                                             beta_i[[i_groups]])
+            c_eta[[i_groups]] - e_eta[[i_groups]] %*% alpha_all[[i_groups]] - c_eta[[i_groups]] %*% t(beta_all[[i_groups]]) - alpha_all[[i_groups]] %*% t(e_eta[[i_groups]]) +
+              alpha_all[[i_groups]] %*% t(alpha_all[[i_groups]]) + (alpha_all[[i_groups]]) %*% t(e_eta[[i_groups]]) %*% t(beta_all[[i_groups]]) - (beta_all[[i_groups]]) %*% t(c_eta[[i_groups]]) +
+              beta_all[[i_groups]] %*% e_eta[[i_groups]] %*% t(alpha_all[[i_groups]]) + beta_all[[i_groups]] %*% c_eta[[i_groups]] %*% t(beta_all[[i_groups]])
           })
         
         
@@ -717,14 +706,15 @@
       w_g = w_g,
       n_v = n_v
     )
-    rpl <-
-      sapply(output$value[is.na(output$type)], function(x)
+    if (sum(is.na(output$type)) > 0) {
+    rpl <- sapply(output$value[is.na(output$type)], function(x)
         .rpl_cal(
           x,
           gamma = gamma,
           type = type,
           delta = delta
-        )) %>% sum
+        )) %>% sum 
+    } else { rpl <- 0 }
     dpl <- dml + rpl
     lrt <- n_obs * dml
     lrt_b <- n_obs * dml_b
