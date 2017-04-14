@@ -692,7 +692,7 @@
     mu_v <-
       lapply(1:n_groups, function(i_groups)
         subset(ini$mu_eta[[i_groups]], G_eta))
-    df <- n_v * (n_v + 3) / 2 - n_par
+    df <- (n_v * (n_v + 3) / 2)*n_groups - n_par
     df_b <- n_v * (n_v + 3) / 2 - 2 * n_v
     n_obs <- attributes(data)$obs_size %>% sum
     
