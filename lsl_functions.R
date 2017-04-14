@@ -57,8 +57,7 @@
       beta_r <- 1 * .is_one(beta_p)
       phi_r <- diag(0, n_eta, n_eta)
     } else {
-      alpha_r <-
-        c(data$raw_mean[[nm_g[[1]]]], rep(0, n_f))
+      alpha_r <- c(data$raw_mean[[nm_g[[1]]]], rep(0, n_f))
       if (exists("alpha_v", value)) {
         alpha_r[1:n_v] <- value$alpha_v
       }
@@ -149,8 +148,7 @@
            group) {
     pars <- mapply(
       function(ma, val, pat, p, v, co, ro, nm) {
-        rbind(nm[p | v], ma, group, ro[p | v], co[p |
-                                                    v], pat[p | v], val[p | v]) %>%
+        rbind(nm[p | v], ma, group, ro[p | v], co[p | v], pat[p | v], val[p | v]) %>%
           `rownames<-`(c("name", "matrix", "group", "row", "col", "type", "value"))
       },
       val = lapply(value, as.matrix),
@@ -214,15 +212,18 @@
   mu_v <-
     lapply(1:n_groups, function(i_groups)
       subset(ini$mu_eta[[i_groups]], ini$G_eta))
+      #ini$mu_eta[[i_groups]][as.matrix(G_eta),])
   sigma_veta <-
     lapply(1:n_groups, function(i_groups)
       subset(ini$sigma_eta[[i_groups]], ini$G_eta))
+      #ini$sigma_eta[[i_groups]][as.matrix(G_eta),])
   sigma_etav <-
     lapply(1:n_groups, function(i_groups)
       t(sigma_veta[[i_groups]]))
   sigma_v <-
     lapply(1:n_groups, function(i_groups)
       subset(ini$sigma_eta[[i_groups]], ini$G_eta, ini$G_eta))
+      #ini$sigma_eta[[i_groups]][as.matrix(G_eta),G_eta])
   J <-
     lapply(1:n_groups, function(i_groups)
       mu_eta[[i_groups]] - sigma_etav[[i_groups]] %*% solve(sigma_v[[i_groups]]) %*% mu_v[[i_groups]])
@@ -243,16 +244,15 @@
 }
 
 
-.cm_step_cal <-
-  function(w_g = w_g,
-           JK = JK,
-           JLK = JLK,
-           par_mat = ini$par_mat,
-           e_step = e_step,
-           type = type,
-           gamma = gamma,
-           delta = delta,
-           data = data) {
+.cm_step_cal <- function(w_g = w_g,
+                         JK = JK,
+                         JLK = JLK,
+                         par_mat = ini$par_mat,
+                         e_step = e_step,
+                         type = type,
+                         gamma = gamma,
+                         delta = delta,
+                         data = data) {
     e_eta <- e_step$e_eta
     c_eta <- e_step$c_eta
     phi_r <- par_mat$value$phi_r
@@ -562,16 +562,14 @@
     JK <- expand.grid(1:n_eta, 1:n_eta)[2:1]
     JLK <- expand.grid(1:(n_eta - 1), 1:n_eta)[2:1]
     
-    ini <-
-      list(
-        IBinv = IBinv,
-        mu_eta = mu_eta,
-        sigma_eta = sigma_eta,
-        c_v = c_v,
-        G_eta = G_eta,
-        e_v = e_v,
-        par_mat = par_mat
-      )
+    ini <- list(IBinv = IBinv,
+                mu_eta = mu_eta,
+                sigma_eta = sigma_eta,
+                c_v = c_v,
+                G_eta = G_eta,
+                e_v = e_v,
+                par_mat = par_mat
+                )
     ref <-
       .par_tab_cal(
         pattern = ini$par_mat$pattern,

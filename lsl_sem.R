@@ -128,7 +128,7 @@ lslSEM <- methods::setRefClass(
           data = data
         )
       ref <-
-        .getpar(
+        .par_tab_cal(
           pattern = par_mat$pattern,
           value = list(
             par_mat$value$alpha_r,
@@ -142,7 +142,7 @@ lslSEM <- methods::setRefClass(
         )
       inc <-
         lapply((1:n_groups), function(x) {
-          .getpar(
+          .par_tab_cal(
             pattern = par_mat$pattern,
             value = list(
               par_mat$value$alpha_i[[x]],
@@ -194,12 +194,10 @@ lslSEM <- methods::setRefClass(
       }
       
       
-      par_mat <-
-        attributes(model)$par_mat
-      allpen <-
-        expand.grid(pl = pl,
-                    delta = delta,
-                    gamma = gamma)
+      par_mat <- attributes(model)$par_mat
+      allpen <- expand.grid(pl = pl,
+                            delta = delta,
+                            gamma = gamma)
       
       knowledge <<-
         lapply(1:nrow(allpen), function(x) {
