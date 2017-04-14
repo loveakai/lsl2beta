@@ -158,12 +158,10 @@ lslSEM <- methods::setRefClass(
         rm(value)
       })
       
-      output <-
-        output[!(output$par_matrix == "phi" & (output$row > output$col)),]
+      output <- output[!(output$matrix == "phi" & (output$row > output$col)),]
       attr(output, "par_mat") <- par_mat
       attr(output, "labels") <- labels
-      attr(output, "ref_group") <-
-        attributes(data)$g_label[ref_group]
+      attr(output, "ref_group") <- attributes(data)$g_label[ref_group]
       model <<- output
     },
     

@@ -509,7 +509,6 @@
            model = model,
            data = data) {
     alpha_p <- par_mat$pattern$alpha_p
-    
     beta_p <- par_mat$pattern$beta_p
     phi_p <- par_mat$pattern$phi_p
     alpha_r <- par_mat$value$alpha_r
@@ -534,8 +533,7 @@
     par_mat_label <- attributes(model)$labels$par_mat_label
     
     
-    ide <-
-      diag(1, ncol = n_eta, nrow = n_eta) %>% `colnames<-`(eta_label) %>% `rownames<-`(eta_label)
+    ide <- diag(1, ncol = n_eta, nrow = n_eta) %>% `colnames<-`(eta_label) %>% `rownames<-`(eta_label)
     G_eta <- c(rep(T, n_v), rep(F, n_f)) %>% `names<-`(eta_label)
     c_v <-
       lapply(1:n_groups, function(i_groups) {
@@ -605,7 +603,6 @@
       #cat("...",it)
       #mod10<-ifelse(mod(it,75)==0,75,mod(it,75))
       #print(noquote(pic[mod10]))
-      
       e_step <- .e_step_cal(ini, data = data)
       cm_step <-
         .cm_step_cal(
