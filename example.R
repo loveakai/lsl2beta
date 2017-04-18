@@ -22,8 +22,8 @@ rc_sem <- lslSEM()
 rc_sem$input(raw_obs = dta, var_subset = c(7:15))
 rc_sem$specify(pattern)
 rc_sem$learn(penalty = "scad",
- gamma = 0.1,
- delta = 2.5)
+             gamma=seq(0.01,0.2,0.01),
+             delta = 2.5)
 proc.time()-tm
 
 rc_sem$knowledge

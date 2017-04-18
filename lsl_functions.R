@@ -1,10 +1,4 @@
-.par_mat_cal <-function(pattern,
-                        value,
-                        n_groups,
-                        scale,
-                        labels,
-                        ref_group,
-                        data = data) {
+.par_mat_cal <- function(pattern, value, n_groups, scale, labels, ref_group, data = data) {
     #pattern matarices generation
     #only 3 matrices have pattern matrix, including alpha, beta, Phi
     
@@ -137,13 +131,7 @@
     
   }
 
-.par_tab_cal <-
-  function(pattern,
-           value,
-           v_label,
-           f_label,
-           par_mat_label,
-           group) {
+.par_tab_cal <- function(pattern, value, v_label, f_label, par_mat_label, group) {
     pars <- mapply(
       function(ma, val, pat, p, v, co, ro, nm) {
         rbind(nm[p | v], ma, group, ro[p | v], co[p | v], pat[p | v], val[p | v]) %>%
@@ -176,9 +164,7 @@
     }) %>% return
   }
 
-.par_val_cal <-
-  function(pattern,
-           value) {
+.par_val_cal <- function(pattern, value) {
     pars <- mapply(
       function(val, p, v) {
         val[p | v]
@@ -194,8 +180,7 @@
     return(pars)
   }
 
-.varphi <-
-  function(x, Phi) {
+.varphi <- function(x, Phi) {
     diag(Phi)[x] - Phi[x,-x] %*% solve(Phi[-x,-x]) %*% Phi[-x, x]
   }
 
@@ -259,7 +244,6 @@
     })
   return(list(e_eta = e_eta, c_eta = c_eta))
 }
-
 
 .cm_step_cal <- function(w_g = w_g,
                          JK = JK,
@@ -507,13 +491,7 @@
     )
   }
 
-.ecm_alg_cal <-
-  function(par_mat = par_mat,
-           maxit,
-           cri,
-           penalize,
-           model = model,
-           data = data) {
+.ecm_alg_cal <- function(par_mat = par_mat, maxit, cri, penalize, model = model, data = data) {
     alpha_p <- par_mat$pattern$alpha_p
     beta_p <- par_mat$pattern$beta_p
     phi_p <- par_mat$pattern$phi_p
@@ -566,14 +544,7 @@
     JK <- expand.grid(1:n_eta, 1:n_eta)[2:1]
     JLK <- expand.grid(1:(n_eta - 1), 1:n_eta)[2:1]
     
-    ini <- list(IBinv = IBinv,
-                mu_eta = mu_eta,
-                sigma_eta = sigma_eta,
-                c_v = c_v,
-                G_eta = G_eta,
-                e_v = e_v,
-                par_mat = par_mat
-                )
+    ini <- list(IBinv = IBinv, mu_eta = mu_eta, sigma_eta = sigma_eta, c_v = c_v, G_eta = G_eta, e_v = e_v, par_mat = par_mat )
 
     inival <- model$ini
     
@@ -583,17 +554,7 @@
       #print(noquote(pic[mod10]))
       e_step <- .e_step_cal(ini, data = data)
       cm_step <-
-        .cm_step_cal(
-          w_g = w_g,
-          JK = JK,
-          JLK = JLK,
-          par_mat = ini$par_mat,
-          e_step = e_step,
-          type = type,
-          gamma = gamma,
-          delta = delta,
-          data = data
-        )
+        .cm_step_cal( w_g = w_g, JK = JK, JLK = JLK, par_mat = ini$par_mat, e_step = e_step, type = type, gamma = gamma, delta = delta, data = data )
       ini$par_mat$value$phi_r <- phi_r <- cm_step$phi_r
       ini$par_mat$value$beta_r <- beta_r <- cm_step$beta_r
       ini$par_mat$value$alpha_r <- alpha_r <- cm_step$alpha_r
@@ -617,13 +578,13 @@
             ini$par_mat$value$beta_r,
             ini$par_mat$value$phi_r
           ))
-      inc <- lapply((1:n_groups), function(x) {
+      inc <- lapply((1:n_groups), function(i_groups) {
         .par_val_cal(
           pattern = ini$par_mat$pattern,
           value = list(
-            ini$par_mat$value$alpha_i[[x]],
-            ini$par_mat$value$beta_i[[x]],
-            ini$par_mat$value$phi_i[[x]]
+            ini$par_mat$value$alpha_i[[i_groups]],
+            ini$par_mat$value$beta_i[[i_groups]],
+            ini$par_mat$value$phi_i[[i_groups]]
           )
         )
       }) %>% unlist %>% c(ref, .)
@@ -634,7 +595,26 @@
         inival <- newval
       }
     }
-    ######此處需補上真正參數之計算方式
+    allpar_ref<-.par_tab_cal(
+      pattern=ini$par_mat$pattern,
+      value=list(
+      ini$par_mat$value$alpha_r,
+      ini$par_mat$value$beta_r,
+      ini$par_mat$value$phi_r),
+      v_label=attributes(model)$labels$v_label, f_label=attributes(model)$labels$f_label, par_mat_label=attributes(model)$labels$par_mat_label, group="r")
+    allpar_inc<-lapply((1:n_groups), function(i_groups) {
+      .par_tab_cal(
+      pattern=ini$par_mat$pattern,
+      value = list(
+        ini$par_mat$value$alpha_i[[i_groups]],
+        ini$par_mat$value$beta_i[[i_groups]],
+        ini$par_mat$value$phi_i[[i_groups]]
+      ), v_label=attributes(model)$labels$v_label,
+      f_label=attributes(model)$labels$f_label,
+      par_mat_label=attributes(model)$labels$par_mat_label,
+      group=names(par_mat$value$alpha_i[i_groups]))}) %>% do.call(rbind,.) %>% rbind(allpar_ref,.)
+    output   <-allpar_inc
+    output   <-output[!(output$matrix=="phi"&(output$row>output$col)),]
     output_par <-
       output[.is_one(output$type) |
                (output$type == 0 &
