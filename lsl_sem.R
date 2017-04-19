@@ -3,8 +3,7 @@ lslSEM <- methods::setRefClass(
   fields = list(
     data = "list",
     model = "data.frame",
-    knowledge = "list",
-    print = "list"
+    knowledge = "list"
   ),
   
   methods = list(
@@ -239,7 +238,7 @@ lslSEM <- methods::setRefClass(
       }
       
       names(pars)<-selector
-      print<<-pars
+      print(pars)
 
     }
   )
