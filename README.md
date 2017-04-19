@@ -1,5 +1,9 @@
 # lsl2beta
 
+#### 20170419
+>(try9)</p>
+1. 增加summary method，可以選擇aic/bic，若相等選擇delta最大者，若相等選gammay最大者。
+
 #### 20170418
 >(try8)</p>
 1. 更正par和df算法
