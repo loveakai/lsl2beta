@@ -95,7 +95,6 @@
       lapply(data$raw_mean, function(x) {
         (c(x, rep(0, n_f)) - alpha_r) %>% `names<-`(nm)
       })[c(ref_group, (1:n_groups)[-ref_group])]
-    #alpha_i<-rep(list(rep(0,n_eta)),n_groups)
     beta_i <- rep(list(0 * beta_r), n_groups)
     
     g <- 0.1 * diag(ncol(phi_r))
@@ -108,17 +107,14 @@
     output <-
       list(
         pattern = list(
-          #alpha_p = as.matrix(alpha_p),
           alpha_p = alpha_p,
           beta_p = beta_p,
           phi_p = phi_p
         ),
         value = list(
-          #alpha_r = as.matrix(alpha_r),
           alpha_r = alpha_r,
           beta_r = beta_r,
           phi_r = phi_r,
-          #alpha_i = lapply(alpha_i,as.matrix),
           alpha_i = alpha_i,
           beta_i = beta_i,
           phi_i = phi_i
@@ -131,53 +127,61 @@
     
   }
 
+# .par_tab_cal <- function(pattern, value, v_label, f_label, par_mat_label, group) {
+#     pars <- mapply(
+#       function(ma, val, pat, p, v, co, ro, nm) {
+#         rbind(nm[p | v], ma, group, ro[p | v], co[p | v], pat[p | v], val[p | v]) %>%
+#           `rownames<-`(c("name", "matrix", "group", "row", "col", "type", "value"))
+#       },
+#       val = lapply(value, as.matrix),
+#       pat = lapply(pattern, as.matrix),
+#        p = lapply(pattern, function(x) {
+#          as.matrix(x) %>% .is_est
+#        }),
+#       #p = lapply(pattern,.is_est)
+#       v = lapply(value, function(x) {
+#         as.matrix(x) != 0
+#       }),
+#       co = lapply(pattern, function(x) {
+#         as.matrix(x) %>% col
+#       }),
+#       ro = lapply(pattern, function(x) {
+#         as.matrix(x) %>% row
+#       }),
+#       nm = list(c(v_label, f_label), par_mat_label, par_mat_label) %>% lapply(as.matrix),
+#       ma = list("alpha", "beta", "phi")
+#     ) %>%
+#       `names<-`(c("alpha", "beta", "phi")) %>% lapply(., t) %>% do.call(rbind, .)
+#     within(as.data.frame(pars), {
+#       col <- as.numeric(levels(col)[col])
+#       row <- as.numeric(levels(row)[row])
+#       value <- as.numeric(levels(value)[value])
+#       type <- as.numeric(levels(type)[type])
+#     }) %>% return
+#   }
+
 .par_tab_cal <- function(pattern, value, v_label, f_label, par_mat_label, group) {
-    pars <- mapply(
-      function(ma, val, pat, p, v, co, ro, nm) {
-        rbind(nm[p | v], ma, group, ro[p | v], co[p | v], pat[p | v], val[p | v]) %>%
-          `rownames<-`(c("name", "matrix", "group", "row", "col", "type", "value"))
-      },
-      val = lapply(value, as.matrix),
-      pat = lapply(pattern, as.matrix),
-       p = lapply(pattern, function(x) {
-         as.matrix(x) %>% .is_est
-       }),
-      #p = lapply(pattern,.is_est)
-      v = lapply(value, function(x) {
-        as.matrix(x) != 0
-      }),
-      co = lapply(pattern, function(x) {
-        as.matrix(x) %>% col
-      }),
-      ro = lapply(pattern, function(x) {
-        as.matrix(x) %>% row
-      }),
-      nm = list(c(v_label, f_label), par_mat_label, par_mat_label) %>% lapply(as.matrix),
-      ma = list("alpha", "beta", "phi")
-    ) %>%
-      `names<-`(c("alpha", "beta", "phi")) %>% lapply(., t) %>% do.call(rbind, .)
-    within(as.data.frame(pars), {
-      col <- as.numeric(levels(col)[col])
-      row <- as.numeric(levels(row)[row])
-      value <- as.numeric(levels(value)[value])
-      type <- as.numeric(levels(type)[type])
-    }) %>% return
-  }
+  nm <- list(c(v_label, f_label), par_mat_label, par_mat_label)
+  ma <- list("alpha", "beta", "phi")
+  choose <- lapply(1:length(pattern),function(x) .is_est(pattern[[x]])|(value[[x]]!=0))
+  co = lapply(pattern, function(x) {
+    as.matrix(x) %>% col
+  })
+  ro = lapply(pattern, function(x) {
+    as.matrix(x) %>% row
+  })
+  pars<-lapply(1:3, function(x) cbind(nm[[x]][choose[[x]]],ma[[x]],group,ro[[x]][choose[[x]]],co[[x]][choose[[x]]],pattern[[x]][choose[[x]]],value[[x]][choose[[x]]])) %>%
+    `names<-`(c("alpha", "beta", "phi")) %>% do.call(rbind, .) %>% `colnames<-`(c("name", "matrix", "group", "row", "col", "type", "value"))
+  within(as.data.frame(pars,row.names = 1), {
+    col <- as.numeric(levels(col)[col])
+    row <- as.numeric(levels(row)[row])
+    value <- as.numeric(levels(value)[value])
+    type <- as.numeric(levels(type)[type])
+  }) %>% return
+}
 
 .par_val_cal <- function(pattern, value) {
-    pars <- mapply(
-      function(val, p, v) {
-        val[p | v]
-      },
-      val = lapply(value, as.matrix),
-      p = lapply(pattern, function(x) {
-        as.matrix(x) %>% .is_est
-      }),
-      #p = lapply(pattern,.is_est)
-      v = lapply(value, function(x) {
-        as.matrix(x) != 0
-      })) %>% unlist
-    return(pars)
+  pars   <- lapply(1:3, function(x) value[[x]][.is_est(pattern[[x]])|(value[[x]]!=0)]) %>% unlist %>% return
   }
 
 .varphi <- function(x, Phi) {
@@ -214,18 +218,15 @@
   mu_v <-
     lapply(1:n_groups, function(i_groups)
       subset(ini$mu_eta[[i_groups]], ini$G_eta))
-      #ini$mu_eta[[i_groups]][as.matrix(G_eta),])
   sigma_veta <-
     lapply(1:n_groups, function(i_groups)
       subset(ini$sigma_eta[[i_groups]], ini$G_eta))
-      #ini$sigma_eta[[i_groups]][as.matrix(G_eta),])
   sigma_etav <-
     lapply(1:n_groups, function(i_groups)
       t(sigma_veta[[i_groups]]))
   sigma_v <-
     lapply(1:n_groups, function(i_groups)
       subset(ini$sigma_eta[[i_groups]], ini$G_eta, ini$G_eta))
-      #ini$sigma_eta[[i_groups]][as.matrix(G_eta),G_eta])
   J <-
     lapply(1:n_groups, function(i_groups)
       mu_eta[[i_groups]] - sigma_etav[[i_groups]] %*% solve(sigma_v[[i_groups]]) %*% mu_v[[i_groups]])
@@ -613,8 +614,7 @@
       f_label=attributes(model)$labels$f_label,
       par_mat_label=attributes(model)$labels$par_mat_label,
       group=names(par_mat$value$alpha_i[i_groups]))}) %>% do.call(rbind,.) %>% rbind(allpar_ref,.)
-    output   <-allpar_inc
-    output   <-output[!(output$matrix=="phi"&(output$row>output$col)),]
+    output   <-allpar_inc[attributes(model)$selection,]
     output_par <-
       output[.is_one(output$type) |
                (output$type == 0 &

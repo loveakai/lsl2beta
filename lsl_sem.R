@@ -7,14 +7,9 @@ lslSEM <- methods::setRefClass(
   ),
   
   methods = list(
-    input = function(raw_obs,
-                     var_subset,
-                     var_group,
-                     obs_subset,
-                     obs_weight,
-                     raw_cov,
-                     raw_mean,
-                     obs_size) {
+    input = function(raw_obs, var_subset, var_group,
+                     obs_subset, obs_weight, raw_cov,
+                     raw_mean, obs_size) {
       if (missing(raw_obs)) {
         if (is.list(raw_cov)) {
           output <- list(raw_cov = raw_cov, raw_mean = raw_mean)
@@ -78,13 +73,9 @@ lslSEM <- methods::setRefClass(
       data <<- output
     },
     
-    specify = function(pattern,
-                       value,
-                       difference,
-                       ref_group,
-                       auto_scale = T,
-                       v_label,
-                       f_label) {
+    specify = function(pattern, value, difference,
+                       ref_group, auto_scale = T,
+                       v_label, f_label) {
       if (!exists("beta_vf", pattern))
         stop("beta_vf must be specified")
       if (missing(v_label)) {
