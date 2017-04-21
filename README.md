@@ -1,5 +1,9 @@
 # lsl2beta
 
+#### 20170421
+>(try9)</p>
+1. 修改summary
+
 #### 20170420
 >(try9)</p>
 1. 修改.par_tab_cal 與 .par_var_cal
