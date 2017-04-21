@@ -1,5 +1,9 @@
 # lsl2beta
 
+#### 20170420
+>(try9)</p>
+1. 修改.par_tab_cal 與 .par_var_cal
+
 #### 20170419
 >(try9)</p>
 1. 增加summary method，可以選擇aic/bic，若相等選擇delta最大者，若相等選gammay最大者。
