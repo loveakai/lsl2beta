@@ -30,4 +30,10 @@ proc.time()-tm
 rc_sem$knowledge
 
 
-
+rc_sem <- lslSEM()
+rc_sem$input(raw_obs = dta,var_group = "group")
+rc_sem$specify(pattern)
+rc_sem$learn(penalty = "scad",
+             gamma = c(0.1,0.2,0.3),
+             delta = 2.5)
+rc_sem$summary(selector="aic")

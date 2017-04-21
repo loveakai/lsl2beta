@@ -187,7 +187,8 @@ lslSEM <- methods::setRefClass(
                             delta = delta,
                             gamma = gamma)
       
-      knowledge <<-
+      
+      ecm_output <-
         lapply(1:nrow(allpen), function(x) {
           penalize <- list(pl = pl,
                            delta = allpen[x, 2],
@@ -202,6 +203,9 @@ lslSEM <- methods::setRefClass(
           )
         })
       
+      attr(ecm_output,"n_penalty") <- nrow(allpen)
+      knowledge <<- ecm_output
+      
     },
 
     summary = function(selector) {
@@ -209,18 +213,18 @@ lslSEM <- methods::setRefClass(
       if (!is.character(selector)) selector<-as.character(selector)
       if (sum(!(selector %in% c("aic","bic")))>0) stop("selector must be 'aic' or 'bic'")
       
-      n_groups <-attributes(data)$n_groups
+      n_penalty <-attributes(knowledge)$n_penalty
       n_selector <- seq_along(selector)
       pars<-list()
       
       for (i_selector in n_selector){
-      goodness_val<-sapply((1:n_groups), function(i_groups) knowledge[[i_groups]]$goodness[[selector[[i_selector]]]])
+      goodness_val<-sapply((1:n_penalty), function(i_penalty) knowledge[[i_penalty]]$goodness[[selector[[i_selector]]]])
       min_goodness_val<-which(goodness_val==min(goodness_val))
       if(length(min_goodness_val)!=1) {
-        goodness_delta<-max(sapply((min_goodness_val), function(i_groups) knowledge[[i_groups]]$optimization$delta))
+        goodness_delta<-max(sapply((min_goodness_val), function(i_penalty) knowledge[[i_penalty]]$optimization$delta))
         max_delta<-which(goodness_delta==max(goodness_delta))
         if (length(max_delta) != 1) {
-          max_gamma<-which.max(sapply(min_goodness_val[max_delta], function(i_groups) knowledge[[i_groups]]$optimization$gamma))
+          max_gamma<-which.max(sapply(min_goodness_val[max_delta], function(i_penalty) knowledge[[i_penalty]]$optimization$gamma))
           min_aic<-min_goodness_val[max_delta][max_gamma]
           } else {min_goodness_val<-min_goodness_val[max_delta]}
       }
