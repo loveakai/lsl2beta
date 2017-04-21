@@ -7,14 +7,9 @@ lslSEM <- methods::setRefClass(
   ),
   
   methods = list(
-    input = function(raw_obs,
-                     var_subset,
-                     var_group,
-                     obs_subset,
-                     obs_weight,
-                     raw_cov,
-                     raw_mean,
-                     obs_size) {
+    input = function(raw_obs, var_subset, var_group,
+                     obs_subset, obs_weight, raw_cov,
+                     raw_mean, obs_size) {
       if (missing(raw_obs)) {
         if (is.list(raw_cov)) {
           output <- list(raw_cov = raw_cov, raw_mean = raw_mean)
@@ -78,13 +73,9 @@ lslSEM <- methods::setRefClass(
       data <<- output
     },
     
-    specify = function(pattern,
-                       value,
-                       difference,
-                       ref_group,
-                       auto_scale = T,
-                       v_label,
-                       f_label) {
+    specify = function(pattern, value, difference,
+                       ref_group, auto_scale = T,
+                       v_label, f_label) {
       if (!exists("beta_vf", pattern))
         stop("beta_vf must be specified")
       if (missing(v_label)) {
@@ -196,7 +187,8 @@ lslSEM <- methods::setRefClass(
                             delta = delta,
                             gamma = gamma)
       
-      knowledge <<-
+      
+      ecm_output <-
         lapply(1:nrow(allpen), function(x) {
           penalize <- list(pl = pl,
                            delta = allpen[x, 2],
@@ -210,6 +202,39 @@ lslSEM <- methods::setRefClass(
             data = data
           )
         })
+      
+      attr(ecm_output,"n_penalty") <- nrow(allpen)
+      knowledge <<- ecm_output
+      
+    },
+
+    summary = function(selector) {
+      if (missing(selector)) selector<-"aic"
+      if (!is.character(selector)) selector<-as.character(selector)
+      if (sum(!(selector %in% c("aic","bic")))>0) stop("selector must be 'aic' or 'bic'")
+      
+      n_penalty <-attributes(knowledge)$n_penalty
+      n_selector <- seq_along(selector)
+      pars<-list()
+      
+      for (i_selector in n_selector){
+      goodness_val<-sapply((1:n_penalty), function(i_penalty) knowledge[[i_penalty]]$goodness[[selector[[i_selector]]]])
+      min_goodness_val<-which(goodness_val==min(goodness_val))
+      if(length(min_goodness_val)!=1) {
+        goodness_delta<-max(sapply((min_goodness_val), function(i_penalty) knowledge[[i_penalty]]$optimization$delta))
+        max_delta<-which(goodness_delta==max(goodness_delta))
+        if (length(max_delta) != 1) {
+          max_gamma<-which.max(sapply(min_goodness_val[max_delta], function(i_penalty) knowledge[[i_penalty]]$optimization$gamma))
+          min_aic<-min_goodness_val[max_delta][max_gamma]
+          } else {min_goodness_val<-min_goodness_val[max_delta]}
+      }
+      para<-knowledge[[min_goodness_val]]$parameter %>% cbind(model,parameter=.)
+      pars[[i_selector]]<-para[(.is_one(para$type))|(is.na(para$type)&(para$parameter!=0)),]
+      }
+      
+      names(pars)<-selector
+      print(pars)
+
     }
   )
 )
