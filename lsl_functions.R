@@ -614,11 +614,14 @@
       f_label=attributes(model)$labels$f_label,
       par_mat_label=attributes(model)$labels$par_mat_label,
       group=names(par_mat$value$alpha_i[i_groups]))}) %>% do.call(rbind,.) %>% rbind(allpar_ref,.)
-    output   <-allpar_inc[attributes(model)$selection,]
-    output_par <-
-      output[.is_one(output$type) |
-               (output$type == 0 &
-                  output$value != 0) | (is.na(output$type) & output$value != 0),]
+    
+    output   <-allpar_inc[attributes(model)$selection,] #remove duplicate phi
+    
+     output_par <-
+       output[.is_one(output$type) |
+                (output$type == 0 &
+                   output$value != 0) | (is.na(output$type) & output$value != 0),]
+    
     q <- output_par[.is_est(output_par$type),]
     ref_group <- attributes(model)$ref_group
     

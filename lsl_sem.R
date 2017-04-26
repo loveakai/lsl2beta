@@ -108,13 +108,7 @@ lslSEM <- methods::setRefClass(
       
       par_mat <-
         .par_mat_cal(
-          pattern,
-          value,
-          n_groups = n_groups,
-          labels = labels,
-          scale = auto_scale,
-          ref_group = ref_group,
-          data = data
+          pattern, value, n_groups = n_groups, labels = labels, scale = auto_scale, ref_group = ref_group, data = data
         )
       ref <-
         .par_tab_cal(
@@ -124,10 +118,7 @@ lslSEM <- methods::setRefClass(
             par_mat$value$beta_r,
             par_mat$value$phi_r
           ),
-          v_label,
-          f_label,
-          par_mat_label,
-          group = "r"
+          v_label, f_label, par_mat_label, group = "r"
         )
       inc <-
         lapply((1:n_groups), function(x) {
@@ -138,10 +129,7 @@ lslSEM <- methods::setRefClass(
               par_mat$value$beta_i[[x]],
               par_mat$value$phi_i[[x]]
             ),
-            v_label,
-            f_label,
-            par_mat_label,
-            group = names(par_mat$value$alpha_i[x])
+            v_label, f_label, par_mat_label, group = names(par_mat$value$alpha_i[x])
           )
         }) %>% do.call(rbind, .) %>% rbind(ref, .)
       output <- within(inc, {
@@ -228,8 +216,8 @@ lslSEM <- methods::setRefClass(
           min_aic<-min_goodness_val[max_delta][max_gamma]
           } else {min_goodness_val<-min_goodness_val[max_delta]}
       }
-      para<-knowledge[[min_goodness_val]]$parameter %>% cbind(model,parameter=.)
-      pars[[i_selector]]<-para[(.is_one(para$type))|(is.na(para$type)&(para$parameter!=0)),]
+      pars[[i_selector]]<-knowledge[[min_goodness_val]]$parameter %>% cbind(model,parameter=.)
+      #pars[[i_selector]]<-para[(.is_one(para$type))|(is.na(para$type)&(para$parameter!=0)),]
       }
       
       names(pars)<-selector
